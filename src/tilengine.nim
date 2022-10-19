@@ -211,17 +211,11 @@ type
     # InputP2 = (Player2 shl 5),   ## request player 2 input
     # InputP3 = (Player3 shl 5),   ## request player 3 input
     # InputP4 = (Player4 shl 5)    ## request player 4 input
-    #                       ##  compatibility symbols for pre-1.18 input model
 
-# const
-#   InputA* = InputButton1
-#   InputB* = InputButton2
-#   InputC* = InputButton3
-#   InputD* = InputButton4
-#   InputE* = InputButton5
-#   InputF* = InputButton6
 
 # CreateWindow flags. Can be none or a combination of the following:
+
+# TODO: replace with something idiomatic
 
 const
   cwfFullscreen* = (1 shl 0)     ## Create a fullscreen window
