@@ -11,10 +11,9 @@ These Nim bindings are close to the C bindings, with the following changes:
 
 - "TLN_" prefixes have been dropped, e.g. `TLN_CreateBitmap` &nbsp; → &nbsp; `createBitmap`
 - Procs acting on a common type have the name omitted, e.g. `TLN_GetBitmapWidth` &nbsp; → &nbsp; `getWidth`
-- Procs returning an "out param" via pointer, plus a success bool, now return both as a tuple like `(value, ok)`.
+- Exceptions are used instead of success bools or nil return values.
 - Layers & sprites are [distinct](https://nim-lang.org/docs/manual.html#types-distinct-type) integer types, so you can kinda treat them like objects.
-- Almost all procs returning `bool` are [discardable](https://nim-lang.org/docs/tut1.html#procedures-discard-statement), except those deemed important to check.
-- `Tile` objects have accessors (e.g. `t.flipx = true`) so you don't have to get your hands dirty with flags.
+- `Tile` objects have accessors (e.g. `t.flipx = true`) so you don't have to get your hands dirty with bitwise operations.
 - Enums with short prefixes use camelCase e.g. `cwfVsync`, `errFileNotFound`
 - Enums with long prefixes use PascalCase e.g. `BlendNone`, `InputLeft`
 - Procs have been added to avoid the need for nil. e.g. `TLN_SetLayerPixelMapping(layer, NULL)` &nbsp; → &nbsp; `layer.disablePixelMapping()`
@@ -28,32 +27,29 @@ Note: these bindings do use manual memory management, so you must call `foo.dele
 import tilengine
 
 # Initialise the engine
-let engine = init(400, 240, numlayers = 1, numsprites = 0, numanimations = 0)
+let engine = init(400, 240, numLayers = 1, numSprites = 0, numAnimations = 0)
 
 # Load a tilemap
-let fg = loadTilemap("assets/forest/map.tmx")
+let map = loadTilemap("assets/forest/map.tmx")
 
 # Modify a tile
-block:
-  let x = 10'i32
-  let y = 12'i32
-  var (tile, _) = fg.getTile(y, x)
-  tile.flipx = true
-  tile.flipy = true
-  fg.setTile(y, x, tile)
+let (x, y) = (10'i32, 12'i32)
+var tile = map.getTile(y, x)
+tile.flipx = true
+map.setTile(y, x, tile)
 
 # Assign tilemap to layer
 const layer = Layer(0)
-layer.setTilemap(fg)
+layer.setTilemap(map)
 
 # Create window and run game loop
-doAssert createWindow()
-
+createWindow()
 while processWindow():
   drawFrame()
 
 # Cleanup
-fg.delete()
+map.delete()
+deleteWindow()
 deinit()
 ```
 
