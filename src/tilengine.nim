@@ -430,7 +430,6 @@ proc delete*(list: ObjectList): bool {.tln, importc: "TLN_DeleteObjectList", dis
 
 type Layer* = distinct int32
 
-proc setLayer*(layer: Layer; tileset: Tileset; tilemap: Tilemap): bool {.tln, importc: "TLN_SetLayer", discardable.}
 proc setTilemap*(layer: Layer; tilemap: Tilemap): bool {.tln, importc: "TLN_SetLayerTilemap", discardable.}
 proc setBitmap*(layer: Layer; bitmap: Bitmap): bool {.tln, importc: "TLN_SetLayerBitmap", discardable.}
 proc setPalette*(layer: Layer; palette: Palette): bool {.tln, importc: "TLN_SetLayerPalette", discardable.}
@@ -440,8 +439,7 @@ proc setAffineTransform*(layer: Layer; affine: ptr Affine): bool {.tln, importc:
 proc setAffineTransform*(layer: Layer; affine: Affine): bool {.inline, discardable.} = setAffineTransform(layer, unsafeAddr affine)
 proc disableAffineTransform*(layer: Layer): bool {.inline, discardable.} = setAffineTransform(layer, nil)
 proc setTransform*(layer: int32; angle: float32; dx, dy, sx, sy: float32): bool {.tln, importc: "TLN_SetLayerTransform", discardable.}
-proc setPixelMapping*(layer: Layer; table: ptr PixelMap): bool {.tln, importc: "TLN_SetLayerPixelMapping", discardable.}
-proc setPixelMapping*(layer: Layer; table: PixelMap): bool {.inline, discardable.} = setPixelMapping(layer, unsafeAddr table)
+proc setPixelMapping*(layer: Layer; table: ptr UncheckedArray[PixelMap]): bool {.tln, importc: "TLN_SetLayerPixelMapping", discardable.}
 proc disablePixelMapping*(layer: Layer): bool {.inline, discardable.} = setPixelMapping(layer, nil)
 proc setBlendMode*(layer: Layer; mode: Blend; factor: uint8): bool {.tln, importc: "TLN_SetLayerBlendMode", discardable.}
 proc setColumnOffset*(layer: Layer; offset: ptr UncheckedArray[int32]): bool {.tln, importc: "TLN_SetLayerColumnOffset", discardable.}
