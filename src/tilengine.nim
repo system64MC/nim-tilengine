@@ -213,20 +213,19 @@ type
     # InputP4 = (Player4 shl 5)    ## request player 4 input
 
 
-# CreateWindow flags. Can be none or a combination of the following:
+type
+  CreateWindowFlag* = enum
+    # Flags for `createWindow` proc.
+    cwfFullscreen  ## Create a fullscreen window
+    cwfVsync       ## Sync frame updates with vertical retrace
+    cwfNearest     ## Unfiltered upscaling
 
-# TODO: replace with something idiomatic
-
-const
-  cwfFullscreen* = (1 shl 0)     ## Create a fullscreen window
-  cwfVsync* = (1 shl 1)          ## Sync frame updates with vertical retrace
-  cwfS1* = (1 shl 2)             ## Create a window the same size as the framebuffer
-  cwfS2* = (2 shl 2)             ## Create a window 2x the size the framebuffer
-  cwfS3* = (3 shl 2)             ## Create a window 3x the size the framebuffer
-  cwfS4* = (4 shl 2)             ## Create a window 4x the size the framebuffer
-  cwfS5* = (5 shl 2)             ## Create a window 5x the size the framebuffer
-  cwfNearest* = (1 shl 6)        ## Unfiltered upscaling
-
+proc cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
+  result = 0
+  if cwfFullscreen in flags: result = result or 0x01
+  if cwfVsync in flags:      result = result or 0x02
+  if scale > 0:              result = result or (scale.uint32 shl 2)
+  if cwfVsync in flags:      result = result or 0x40
 # Error codes
 
 type
@@ -317,11 +316,11 @@ proc closeResourcePack*() {.tln, importc: "TLN_CloseResourcePack".}
 # ---------
 # Built-in window and input management
 
-proc createWindowImpl(overlay: cstring; flags: int32): bool {.tln, importc: "TLN_CreateWindow".}
-proc createWindowThreadImpl(overlay: cstring; flags: int32): bool {.tln, importc: "TLN_CreateWindowThread".}
+proc createWindowImpl(overlay: cstring; flags: uint32): bool {.tln, importc: "TLN_CreateWindow".}
+proc createWindowThreadImpl(overlay: cstring; flags: uint32): bool {.tln, importc: "TLN_CreateWindowThread".}
 
-proc createWindow*(overlay: cstring = nil; flags: int32 = 0) = (if not createWindowImpl(overlay, flags): raise e)
-proc createWindowThread*(overlay: cstring = nil; flags: int32 = 0) = (if not createWindowThreadImpl(overlay, flags): raise e)
+proc createWindow*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowImpl(overlay, cwf(scale, flags)): raise e)
+proc createWindowThread*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowThreadImpl(overlay, cwf(scale, flags)): raise e)
 proc setWindowTitle*(title: cstring) {.tln, importc: "TLN_SetWindowTitle".}
 proc processWindow*(): bool {.tln, importc: "TLN_ProcessWindow".}
 proc isWindowActive*(): bool {.tln, importc: "TLN_IsWindowActive".}
