@@ -209,14 +209,13 @@ type
     sprFlipY
     sprPriority
     sprMasked
-
+  
 func spr(flags: set[SpriteFlag]): uint32 =
-  result = 0
-  if sprFlipX in flags:    result = result or 0x8000
-  if sprFlipY in flags:    result = result or 0x4000
-  if sprPriority in flags: result = result or 0x1000
-  if sprMasked in flags:   result = result or 0x0800
-
+  (sprFlipX in flags).uint32 shl 15 or
+  (sprFlipY in flags).uint32 shl 14 or
+  (sprPriority in flags).uint32 shl 12 or
+  (sprMasked in flags).uint32 shl 11
+  
 type
   CreateWindowFlag* {.size: 4.} = enum
     ## Flags for `createWindow` proc.
@@ -225,11 +224,10 @@ type
     cwfNearest     ## Unfiltered upscaling
 
 func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
-  result = 0
-  if cwfFullscreen in flags: result = result or 0x01
-  if cwfVsync in flags:      result = result or 0x02
-  if scale > 0:              result = result or (scale.uint32 shl 2)
-  if cwfVsync in flags:      result = result or 0x40
+  (cwfFullscreen in flags).uint32 shl 0 or
+  (cwfVsync in flags).uint32 shl 1 or
+  scale.uint32 shl 2 or
+  (cwfNearest in flags).uint32 shl 6
 
 type
   TlnErrorKind* {.size: 4.} = enum
