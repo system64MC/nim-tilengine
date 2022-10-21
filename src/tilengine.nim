@@ -10,10 +10,10 @@ elif defined(MacOSX):
 {.pragma: tln, dynlib:libname, cdecl.}
 
 const
-  TilengineVerMaj* = 2
-  TilengineVerMin* = 11
-  TilengineVerRev* = 2
-  NimTilengineVersion* = (TilengineVerMaj, TilengineVerMin, TilengineVerRev)
+  TilengineVersion* = (2, 11, 2)
+    ## The version of Tilengine these bindings were made for `(major, minor, patch)`.
+    ## 
+    ## Use `getVersion` to get the actual version of the shared lib for comparison.
 
 type
   Blend* {.size: 4.} = enum
@@ -103,7 +103,7 @@ type
   TileInfo* {.bycopy.} = object
     ## Tile information returned by `getLayerTile()`
     index*: uint16           ## Tile index
-    flags*: uint16           ## Attributes (FLAG_FLIPX, FLAG_FLIPY, FLAG_PRIORITY)
+    flags*: uint16           ## Attributes (flipX, flipY, priority)
     row*: int32              ## Row number in the tilemap
     col*: int32              ## Col number in the tilemap
     xoffset*: int32          ## Horizontal position inside the title
@@ -116,7 +116,7 @@ type
     ## Object item info returned by `getObjectInfo()`
     id*: uint16              ## Unique ID
     gid*: uint16             ## Graphic ID (tile index)
-    flags*: uint16           ## Attributes (FLAG_FLIPX, FLAG_FLIPY, FLAG_PRIORITY)
+    flags*: uint16           ## Attributes (sprFlipX, sprFlipY, sprPriority)
     x*: int32                ## Horizontal position
     y*: int32                ## Vertical position
     width*: int32            ## Horizontal size
@@ -131,7 +131,7 @@ type
     priority*: bool        ## Priority flag set
   
   CrtEffect* {.size: 4.} = enum
-    ## Types of built-in CRT effect for `configCRTEffect`
+    ## Types of built-in CRT effect for `configCrtEffect`
     crtSlot         ## Slot mask without scanlines, similar to legacy effect
     crtAperture     ## Aperture grille with scanlines (matrix-like dot arrangement)
     crtShadow       ## Shadow mask with scanlines, diagonal subpixel arrangement
@@ -230,7 +230,7 @@ func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
   (cwfNearest in flags).uint32 shl 6
 
 type
-  TlnErrorKind* {.size: 4.} = enum
+  ErrorKind* {.size: 4.} = enum
     ## Error codes
     errOk              ## No error
     errOutOfMemory     ## Not enough memory
@@ -258,20 +258,20 @@ type
     logErrors,           ## Print only runtime errors
     logVerbose           ## Print everything
   
-  TlnError* = object of CatchableError
-    kind*: TlnErrorKind
+  TilengineError* = object of CatchableError
+    kind*: ErrorKind
 
 # ERRORS
 # ------
 
-proc setLastError*(error: TlnErrorKind) {.tln, importc: "TLN_SetLastError".}
-proc getLastError*(): TlnErrorKind {.tln, importc: "TLN_GetLastError".}
-proc getErrorString*(error: TlnErrorKind): cstring {.tln, importc: "TLN_GetErrorString".}
+proc setLastError*(error: ErrorKind) {.tln, importc: "TLN_SetLastError".}
+proc getLastError*(): ErrorKind {.tln, importc: "TLN_GetLastError".}
+proc getErrorString*(error: ErrorKind): cstring {.tln, importc: "TLN_GetErrorString".}
 
-template e: ref TlnError =
+template e: ref TilengineError =
   ## Magic to create an exception with the last error message.
   let kind = getLastError()
-  let err = newException(TlnError, $getErrorString(kind))
+  let err = newException(TilengineError, $getErrorString(kind))
   err.kind = kind
   err
 
