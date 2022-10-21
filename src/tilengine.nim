@@ -16,7 +16,7 @@ const
   TilengineHeaderVersion* = ((TilengineVerMaj shl 16) or (TilengineVerMin shl 8) or TilengineVerRev)
 
 type
-  Blend* = enum
+  Blend* {.size: 4.} = enum
     ## Layer blend modes. Must be one of these and are mutually exclusive:
     BlendNone       ## Blending disabled
     BlendMix25      ## Color averaging 1
@@ -31,8 +31,8 @@ const
   BlendMix* = BlendMix50
 
 type
-  LayerType* = enum
-    ##  layer type retrieved by `getLayerType`
+  LayerType* {.size: 4.} = enum
+    ## Layer type retrieved by `getLayerType`
     LayerNone      ## Undefined
     LayerTile      ## Tilemap-based layer
     LayerObject    ## Objects layer
@@ -123,14 +123,14 @@ type
     height*: int32           ## Vertical size
     kind*: uint8             ## Type property
     visible*: bool           ## Visible property
-    name*: array[64, char]   ## name property
+    name*: array[64, char]   ## Name property
   
   TileAttributes* {.bycopy.} = object
     ## Tileset attributes for `createTileset()`
     kind*: uint8           ## Tile type
     priority*: bool        ## Priority flag set
   
-  CrtEffect* {.size:4.} = enum
+  CrtEffect* {.size: 4.} = enum
     ## Types of built-in CRT effect for `configCRTEffect`
     crtSlot         ## Slot mask without scanlines, similar to legacy effect
     crtAperture     ## Aperture grille with scanlines (matrix-like dot arrangement)
@@ -171,23 +171,22 @@ type
     collision*: bool            ## Per-pixel collision detection enabled or not
 
 
-#  callbacks
+# callbacks
 type
   VideoCallback* = proc (scanline: int32) {.cdecl.}
   BlendFunction* = proc (src, dst: uint8): uint8 {.cdecl.}
   # SDLCallback* = proc (a1: ptr SDL_Event) {.cdecl.}
   SDLCallback* = proc (a1: pointer) {.cdecl.}   # TODO (exe)
 
-# Player index for input assignment functions
-
 type
-  Player* = enum
+  ## Player index for input assignment functions
+  Player* {.size: 4.} = enum
     Player1          ## Player 1
     Player2          ## Player 2
     Player3          ## Player 3
     Player4          ## Player 4
   
-  Input* = enum
+  Input* {.size: 4.} = enum
     ## Standard inputs query for `getInput()`
     InputNone        ## No input
     InputUp          ## Up direction
@@ -203,18 +202,9 @@ type
     InputStart       ## Start button
     InputQuit        ## Window close (only Player 1 keyboard)
     InputCrt         ## CRT toggle (only Player 1 keyboard)
-              ##  ... up to 32 unique inputs
-    
-    # TODO: Check this.
-    
-    # InputP1 = (Player1 shl 5),   ## request player 1 input (default)
-    # InputP2 = (Player2 shl 5),   ## request player 2 input
-    # InputP3 = (Player3 shl 5),   ## request player 3 input
-    # InputP4 = (Player4 shl 5)    ## request player 4 input
-
 
 type
-  SpriteFlag* = enum
+  SpriteFlag* {.size: 4.} = enum
     sprFlipX
     sprFlipY
     sprPriority
@@ -228,8 +218,8 @@ func spr(flags: set[SpriteFlag]): uint32 =
   if sprMasked in flags:   result = result or 0x0800
 
 type
-  CreateWindowFlag* = enum
-    # Flags for `createWindow` proc.
+  CreateWindowFlag* {.size: 4.} = enum
+    ## Flags for `createWindow` proc.
     cwfFullscreen  ## Create a fullscreen window
     cwfVsync       ## Sync frame updates with vertical retrace
     cwfNearest     ## Unfiltered upscaling
@@ -242,7 +232,7 @@ func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
   if cwfVsync in flags:      result = result or 0x40
 
 type
-  TlnErrorKind* = enum
+  TlnErrorKind* {.size: 4.} = enum
     ## Error codes
     errOk              ## No error
     errOutOfMemory     ## Not enough memory
@@ -264,7 +254,7 @@ type
     errUnsupported     ## Unsupported function
     errRefList         ## Invalid ObjectList reference
   
-  LogLevel* = enum
+  LogLevel* {.size: 4.} = enum
     ## Debug level
     logNone,             ## Don't print anything (default)
     logErrors,           ## Print only runtime errors
@@ -341,9 +331,10 @@ proc closeResourcePack*() {.tln, importc: "TLN_CloseResourcePack".}
 
 proc createWindowImpl(overlay: cstring; flags: uint32): bool {.tln, importc: "TLN_CreateWindow".}
 proc createWindowThreadImpl(overlay: cstring; flags: uint32): bool {.tln, importc: "TLN_CreateWindowThread".}
+proc getInputImpl(input: uint32): bool {.tln, importc: "TLN_GetInput".}
 proc assignInputJoystickImpl(player: Player; index: int32) {.tln, importc: "TLN_AssignInputJoystick".}
 proc defineInputKeyImpl(player: Player; input: Input; keycode: uint32) {.tln, importc: "TLN_DefineInputKey".}
-proc drawFrameImpl(frame: int32 = 0) {.tln, importc: "TLN_DrawFrame".}
+proc drawFrameImpl(frame: int32) {.tln, importc: "TLN_DrawFrame".}
 proc enableCrtEffectImpl(overlay: int32; overlayFactor: uint8; threshold: uint8; v0, v1, v2, v3: uint8; blur: bool; glowFactor: uint8) {.tln, importc: "TLN_EnableCRTEffect".}
 proc delayImpl(msecs: uint32) {.tln, importc: "TLN_Delay".}
 proc getTicksImpl(): uint32 {.tln, importc: "TLN_GetTicks".}
@@ -355,7 +346,8 @@ proc createWindowThread*(overlay: cstring = nil; scale: range[0..5] = 0; flags: 
 proc setWindowTitle*(title: cstring) {.tln, importc: "TLN_SetWindowTitle".}
 proc processWindow*(): bool {.tln, importc: "TLN_ProcessWindow".}
 proc isWindowActive*(): bool {.tln, importc: "TLN_IsWindowActive".}
-proc getInput*(id: Input): bool {.tln, importc: "TLN_GetInput".}
+proc getInput*(input: Input): bool {.inline.} = getInputImpl(input.uint32)
+proc getInput*(player: Player; input: Input): bool {.inline.} = getInputImpl((player.uint32 shl 5) or (input.uint32))
 proc enableInput*(player: Player; enable: bool) {.tln, importc: "TLN_EnableInput".}
 proc assignInputJoystick*(player: Player; index: int) {.inline.} = assignInputJoystickImpl(player, cast[int32](index))
 proc defineInputKey*(player: Player; input: Input; keycode: uint32) {.inline.} = defineInputKeyImpl(player, input, keycode)
