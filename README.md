@@ -9,17 +9,17 @@ Refer to the [C docs](https://www.tilengine.org/doc/) and peek at the Nim source
 
 These Nim bindings are close to the C bindings, with the following changes:
 
-- "TLN_" prefixes have been dropped, e.g. `TLN_CreateBitmap` &nbsp; → &nbsp; `createBitmap`
-- Procs acting on a common type have the name omitted, e.g. `TLN_GetBitmapWidth` &nbsp; → &nbsp; `getWidth`
+- "TLN_" prefixes have been dropped, e.g. `TLN_CreateBitmap` &nbsp;→&nbsp; `createBitmap`
+- Procs acting on a common type have the name omitted, e.g. `TLN_GetBitmapWidth` &nbsp;→&nbsp; `getWidth`
 - Exceptions are used instead of success bools or nil return values.
 - Layers & sprites are [distinct](https://nim-lang.org/docs/manual.html#types-distinct-type) integer types, so you can kinda treat them like objects.
 - `Tile` objects have accessors (e.g. `t.flipx = true`) so you don't have to get your hands dirty with bitwise operations.
 - Enums with short prefixes use camelCase e.g. `cwfVsync`, `errFileNotFound`
 - Enums with long prefixes use PascalCase e.g. `BlendNone`, `InputLeft`
-- Procs have been added to avoid the need for nil. e.g. `TLN_SetLayerPixelMapping(layer, NULL)` &nbsp; → &nbsp; `layer.disablePixelMapping()`
+- Procs have been added to avoid the need for nil. e.g. `TLN_SetLayerPixelMapping(layer, NULL)` &nbsp;→&nbsp; `layer.disablePixelMapping()`
 - Where a pointer refers to the first element in an array, `ptr UncheckedArray[T]` is used instead of `ptr T`
 
-Note: these bindings do use manual memory management, so you must call `foo.delete()` etc. to avoid leaks.
+Note: these bindings do use manual memory management, so you must call `map.delete()` etc. to avoid leaks.
 
 ## Example
 
@@ -33,7 +33,7 @@ let engine = init(400, 240, numLayers = 1, numSprites = 0, numAnimations = 0)
 let map = loadTilemap("assets/forest/map.tmx")
 
 # Modify a tile
-let (x, y) = (10'i32, 12'i32)
+let (x, y) = (10, 12)
 var tile = map.getTile(y, x)
 tile.flipx = true
 map.setTile(y, x, tile)

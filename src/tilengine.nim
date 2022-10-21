@@ -214,22 +214,36 @@ type
 
 
 type
+  SpriteFlag* = enum
+    sprFlipX
+    sprFlipY
+    sprPriority
+    sprMasked
+
+func spr(flags: set[SpriteFlag]): uint32 =
+  result = 0
+  if sprFlipX in flags:    result = result or 0x8000
+  if sprFlipY in flags:    result = result or 0x4000
+  if sprPriority in flags: result = result or 0x1000
+  if sprMasked in flags:   result = result or 0x0800
+
+type
   CreateWindowFlag* = enum
     # Flags for `createWindow` proc.
     cwfFullscreen  ## Create a fullscreen window
     cwfVsync       ## Sync frame updates with vertical retrace
     cwfNearest     ## Unfiltered upscaling
 
-proc cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
+func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
   result = 0
   if cwfFullscreen in flags: result = result or 0x01
   if cwfVsync in flags:      result = result or 0x02
   if scale > 0:              result = result or (scale.uint32 shl 2)
   if cwfVsync in flags:      result = result or 0x40
-# Error codes
 
 type
   TlnErrorKind* = enum
+    ## Error codes
     errOk              ## No error
     errOutOfMemory     ## Not enough memory
     errIdxLayer        ## Layer index out of range
@@ -280,23 +294,32 @@ template e: ref TlnError =
 proc initImpl(hres, vres, numLayers, numSprites, numAnimations: int32): Engine {.tln, importc: "TLN_Init".}
 proc deleteContextImpl(context: Engine): bool {.tln, importc: "TLN_DeleteContext".}
 proc setContextImpl(context: Engine): bool {.tln, importc: "TLN_SetContext".}
+proc getWidthImpl(): int32 {.tln, importc: "TLN_GetWidth".}
+proc getHeightImpl(): int32 {.tln, importc: "TLN_GetHeight".}
+proc getNumObjectsImpl(): uint32 {.tln, importc: "TLN_GetNumObjects".}
+proc getUsedMemoryImpl(): uint32 {.tln, importc: "TLN_GetUsedMemory".}
+proc getVersionImpl(): uint32 {.tln, importc: "TLN_GetVersion".}
+proc getNumLayersImpl(): int32 {.tln, importc: "TLN_GetNumLayers".}
+proc getNumSpritesImpl(): int32 {.tln, importc: "TLN_GetNumSprites".}
 proc setBgColorFromTilemapImpl(tilemap: Tilemap): bool {.tln, importc: "TLN_SetBGColorFromTilemap".}
 proc setBgBitmapImpl(bitmap: Bitmap): bool {.tln, importc: "TLN_SetBGBitmap".}
 proc setBgPaletteImpl(palette: Palette): bool {.tln, importc: "TLN_SetBGPalette".}
+proc setRenderTargetImpl(data: ptr UncheckedArray[uint8]; pitch: int32) {.tln, importc: "TLN_SetRenderTarget".}
+proc updateFrameImpl(frame: int32) {.tln, importc: "TLN_UpdateFrame".}
 proc openResourcePackImpl(filename, key: cstring): bool {.tln, importc: "TLN_OpenResourcePack".}
 
-proc init*(hres, vres, numLayers, numSprites, numAnimations: int32): Engine {.inline.} = (result = initImpl(hres, vres, numLayers, numSprites, numAnimations); if result == nil: raise e)
+proc init*(hres, vres, numLayers, numSprites, numAnimations: int): Engine {.inline.} = (result = initImpl(hres.int32, vres.int32, numLayers.int32, numSprites.int32, numAnimations.int32); if result == nil: raise e)
 proc deinit*() {.tln, importc: "TLN_Deinit".}
 proc deleteContext*(context: Engine) {.inline.} = (if not deleteContextImpl(context): raise e)
 proc setContext*(context: Engine) {.inline.} = (if not setContextImpl(context): raise e)
 proc getContext*(): Engine {.tln, importc: "TLN_GetContext".}
-proc getWidth*(): int32 {.tln, importc: "TLN_GetWidth".}
-proc getHeight*(): int32 {.tln, importc: "TLN_GetHeight".}
-proc getNumObjects*(): uint32 {.tln, importc: "TLN_GetNumObjects".}
-proc getUsedMemory*(): uint32 {.tln, importc: "TLN_GetUsedMemory".}
-proc getVersion*(): uint32 {.tln, importc: "TLN_GetVersion".}
-proc getNumLayers*(): int32 {.tln, importc: "TLN_GetNumLayers".}
-proc getNumSprites*(): int32 {.tln, importc: "TLN_GetNumSprites".}
+proc getWidth*(): int {.inline.} = getWidthImpl().int
+proc getHeight*(): int {.inline.} = getHeightImpl().int
+proc getNumObjects*(): int {.inline.} = getNumObjectsImpl().int
+proc getUsedMemory*(): int {.inline.} = getUsedMemoryImpl().int
+proc getVersion*(): int {.inline.} = getVersionImpl().int
+proc getNumLayers*(): int {.inline.} = getNumLayersImpl().int
+proc getNumSprites*(): int {.inline.} = getNumSpritesImpl().int
 proc setBgColor*(r, g, b: uint8) {.tln, importc: "TLN_SetBGColor".}
 proc setBgColorFromTilemap*(tilemap: Tilemap) {.inline.} = (if not setBgColorFromTilemapImpl(tilemap): raise e)
 proc disableBgColor*() {.tln, importc: "TLN_DisableBGColor".}
@@ -304,8 +327,8 @@ proc setBgBitmap*(bitmap: Bitmap) {.inline.} = (if not setBgBitmapImpl(bitmap): 
 proc setBgPalette*(palette: Palette) {.inline.} = (if not setBgPaletteImpl(palette): raise e)
 proc setRasterCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetRasterCallback".}
 proc setFrameCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetFrameCallback".}
-proc setRenderTarget*(data: ptr UncheckedArray[uint8]; pitch: int32) {.tln, importc: "TLN_SetRenderTarget".}
-proc updateFrame*(frame: int32) {.tln, importc: "TLN_UpdateFrame".}
+proc setRenderTarget*(data: ptr UncheckedArray[uint8]; pitch: int) {.inline.} = setRenderTargetImpl(data, cast[int32](pitch))
+proc updateFrame*(frame: int) {.inline.} = updateFrameImpl(cast[int32](frame))
 proc setLoadPath*(path: cstring) {.tln, importc: "TLN_SetLoadPath".}
 proc setCustomBlendFunction*(a1: BlendFunction) {.tln, importc: "TLN_SetCustomBlendFunction".}
 proc setLogLevel*(logLevel: LogLevel) {.tln, importc: "TLN_SetLogLevel".}
@@ -318,6 +341,14 @@ proc closeResourcePack*() {.tln, importc: "TLN_CloseResourcePack".}
 
 proc createWindowImpl(overlay: cstring; flags: uint32): bool {.tln, importc: "TLN_CreateWindow".}
 proc createWindowThreadImpl(overlay: cstring; flags: uint32): bool {.tln, importc: "TLN_CreateWindowThread".}
+proc assignInputJoystickImpl(player: Player; index: int32) {.tln, importc: "TLN_AssignInputJoystick".}
+proc defineInputKeyImpl(player: Player; input: Input; keycode: uint32) {.tln, importc: "TLN_DefineInputKey".}
+proc drawFrameImpl(frame: int32 = 0) {.tln, importc: "TLN_DrawFrame".}
+proc enableCrtEffectImpl(overlay: int32; overlayFactor: uint8; threshold: uint8; v0, v1, v2, v3: uint8; blur: bool; glowFactor: uint8) {.tln, importc: "TLN_EnableCRTEffect".}
+proc delayImpl(msecs: uint32) {.tln, importc: "TLN_Delay".}
+proc getTicksImpl(): uint32 {.tln, importc: "TLN_GetTicks".}
+proc getWindowWidthImpl(): int32 {.tln, importc: "TLN_GetWindowWidth".}
+proc getWindowHeightImpl(): int32 {.tln, importc: "TLN_GetWindowHeight".}
 
 proc createWindow*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowImpl(overlay, cwf(scale, flags)): raise e)
 proc createWindowThread*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowThreadImpl(overlay, cwf(scale, flags)): raise e)
@@ -326,21 +357,21 @@ proc processWindow*(): bool {.tln, importc: "TLN_ProcessWindow".}
 proc isWindowActive*(): bool {.tln, importc: "TLN_IsWindowActive".}
 proc getInput*(id: Input): bool {.tln, importc: "TLN_GetInput".}
 proc enableInput*(player: Player; enable: bool) {.tln, importc: "TLN_EnableInput".}
-proc assignInputJoystick*(player: Player; index: int32) {.tln, importc: "TLN_AssignInputJoystick".}
-proc defineInputKey*(player: Player; input: Input; keycode: uint32) {.tln, importc: "TLN_DefineInputKey".}
+proc assignInputJoystick*(player: Player; index: int) {.inline.} = assignInputJoystickImpl(player, cast[int32](index))
+proc defineInputKey*(player: Player; input: Input; keycode: uint32) {.inline.} = defineInputKeyImpl(player, input, keycode)
 proc defineInputButton*(player: Player; input: Input; joybutton: uint8) {.tln, importc: "TLN_DefineInputButton".}
-proc drawFrame*(frame: int32 = 0) {.tln, importc: "TLN_DrawFrame".}
+proc drawFrame*(frame = 0) {.inline.} = drawFrameImpl(cast[int32](frame))
 proc waitRedraw*() {.tln, importc: "TLN_WaitRedraw".}
 proc deleteWindow*() {.tln, importc: "TLN_DeleteWindow".}
 proc enableBlur*(mode: bool) {.tln, importc: "TLN_EnableBlur".}
 proc configCrtEffect*(kind: CrtEffect; blur: bool) {.tln, importc: "TLN_ConfigCRTEffect".}
-proc enableCrtEffect*(overlay: int32; overlayFactor: uint8; threshold: uint8; v0, v1, v2, v3: uint8; blur: bool; glowFactor: uint8) {.tln, importc: "TLN_EnableCRTEffect".}
+proc enableCrtEffect*(overlay: int; overlayFactor: uint8; threshold: uint8; v0, v1, v2, v3: uint8; blur: bool; glowFactor: uint8) {.inline.} = enableCrtEffectImpl(cast[int32](overlay), overlayFactor, threshold, v0, v1, v2, v3, blur, glowFactor)
 proc disableCrtEffect*() {.tln, importc: "TLN_DisableCRTEffect".}
 proc setSDLCallback*(a1: SDLCallback) {.tln, importc: "TLN_SetSDLCallback".}
-proc delay*(msecs: uint32) {.tln, importc: "TLN_Delay".}
-proc getTicks*(): uint32 {.tln, importc: "TLN_GetTicks".}
-proc getWindowWidth*(): int32 {.tln, importc: "TLN_GetWindowWidth".}
-proc getWindowHeight*(): int32 {.tln, importc: "TLN_GetWindowHeight".}
+proc delay*(msecs: Natural) {.inline.} = delayImpl(cast[uint32](msecs))
+proc getTicks*(): int {.inline.} = getTicksImpl().int
+proc getWindowWidth*(): int {.inline.} = getWindowWidthImpl().int
+proc getWindowHeight*(): int {.inline.} = getWindowHeightImpl().int
 
 # SPRITESET
 # ---------
@@ -350,37 +381,41 @@ proc createSpritesetImpl(bitmap: Bitmap; data: SpriteData; numEntries: int32): S
 proc loadSpritesetImpl(name: cstring): Spriteset {.tln, importc: "TLN_LoadSpriteset".}
 proc cloneImpl(src: Spriteset): Spriteset {.tln, importc: "TLN_CloneSpriteset".}
 proc getSpriteInfoImpl(spriteset: Spriteset; entry: int32; info: var SpriteInfo): bool {.tln, importc: "TLN_GetSpriteInfo".}
+proc findSpriteImpl(spriteset: Spriteset; name: cstring): int32 {.tln, importc: "TLN_FindSpritesetSprite".}
 proc setDataImpl(spriteset: Spriteset; entry: int32; data: SpriteData; pixels: pointer; pitch: int32): bool {.tln, importc: "TLN_SetSpritesetData".}
 proc deleteImpl(spriteset: Spriteset): bool {.tln, importc: "TLN_DeleteSpriteset".}
 
-proc createSpriteset*(bitmap: Bitmap; data: SpriteData; numEntries: int32): Spriteset {.inline.} = (result = createSpritesetImpl(bitmap, data, numEntries); if result == nil: raise e)
+proc createSpriteset*(bitmap: Bitmap; data: SpriteData; numEntries: int): Spriteset {.inline.} = (result = createSpritesetImpl(bitmap, data, cast[int32](numEntries)); if result == nil: raise e)
 proc loadSpriteset*(name: cstring): Spriteset {.inline.} = (result = loadSpritesetImpl(name); if result == nil: raise e)
 proc clone*(src: Spriteset): Spriteset {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
-proc getSpriteInfo*(spriteset: Spriteset; entry: int32): SpriteInfo {.inline.} = (if not getSpriteInfoImpl(spriteset, entry, result): raise e)
+proc getSpriteInfo*(spriteset: Spriteset; entry: int): SpriteInfo {.inline.} = (if not getSpriteInfoImpl(spriteset, cast[int32](entry), result): raise e)
 proc getPalette*(spriteset: Spriteset): Palette {.tln, importc: "TLN_GetSpritesetPalette".}
-proc findSprite*(spriteset: Spriteset; name: cstring): int32 {.tln, importc: "TLN_FindSpritesetSprite".}
-proc setData*(spriteset: Spriteset; entry: int32; data: SpriteData; pixels: pointer; pitch: int32) {.inline.} = (if not setDataImpl(spriteset, entry, data, pixels, pitch): raise e)
+proc findSprite*(spriteset: Spriteset; name: cstring): int {.inline.} = findSpriteImpl(spriteset, name).int
+proc setData*(spriteset: Spriteset; entry: int; data: SpriteData; pixels: pointer; pitch: int) {.inline.} = (if not setDataImpl(spriteset, cast[int32](entry), data, pixels, cast[int32](pitch)): raise e)
 proc delete*(spriteset: Spriteset) {.inline.} = (if not deleteImpl(spriteset): raise e)
 
 # TILESET
 # -------
 # Tileset resources management for background layers
 
-proc createTilesetImpl(numtiles: int32; width, height: int32; palette: Palette; sp: SequencePack; attributes: ptr UncheckedArray[TileAttributes]): Tileset {.tln, importc: "TLN_CreateTileset".}
-proc createImageTilesetImpl(numtiles: int32; images: ptr UncheckedArray[TileImage]): Tileset {.tln, importc: "TLN_CreateImageTileset".}
+proc createTilesetImpl(numTiles: int32; width, height: int32; palette: Palette; sp: SequencePack; attributes: ptr UncheckedArray[TileAttributes]): Tileset {.tln, importc: "TLN_CreateTileset".}
+proc createImageTilesetImpl(numTiles: int32; images: ptr UncheckedArray[TileImage]): Tileset {.tln, importc: "TLN_CreateImageTileset".}
 proc loadTilesetImpl(filename: cstring): Tileset {.tln, importc: "TLN_LoadTileset".}
 proc cloneImpl(src: Tileset): Tileset {.tln, importc: "TLN_CloneTileset".}
 proc setPixelsImpl(tileset: Tileset; entry: int32; srcdata: ptr UncheckedArray[uint8]; srcpitch: int32): bool {.tln, importc: "TLN_SetTilesetPixels".}
+proc getTileWidthImpl(tileset: Tileset): int32 {.tln, importc: "TLN_GetTileWidth".}
+proc getTileHeightImpl(tileset: Tileset): int32 {.tln, importc: "TLN_GetTileHeight".}
+proc getNumTilesImpl(tileset: Tileset): int32 {.tln, importc: "TLN_GetTilesetNumTiles".}
 proc deleteImpl(tileset: Tileset): bool {.tln, importc: "TLN_DeleteTileset".}
 
-proc createTileset*(numtiles: int32; width, height: int32; palette: Palette; sp: SequencePack; attributes: ptr UncheckedArray[TileAttributes]): Tileset {.inline.} = (result = createTilesetImpl(numtiles, width, height, palette, sp, attributes); if result == nil: raise e)
-proc createImageTileset*(numtiles: int32; images: ptr UncheckedArray[TileImage]): Tileset {.inline.} = (result = createImageTilesetImpl(numtiles, images); if result == nil: raise e)
+proc createTileset*(numTiles: int; width, height: int; palette: Palette; sp: SequencePack; attributes: ptr UncheckedArray[TileAttributes]): Tileset {.inline.} = (result = createTilesetImpl(cast[int32](numTiles), cast[int32](width), cast[int32](height), palette, sp, attributes); if result == nil: raise e)
+proc createImageTileset*(numTiles: int; images: ptr UncheckedArray[TileImage]): Tileset {.inline.} = (result = createImageTilesetImpl(cast[int32](numTiles), images); if result == nil: raise e)
 proc loadTileset*(filename: cstring): Tileset {.inline.} = (result = loadTilesetImpl(filename); if result == nil: raise e)
 proc clone*(src: Tileset): Tileset {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
-proc setPixels*(tileset: Tileset; entry: int32; srcdata: ptr UncheckedArray[uint8]; srcpitch: int32) {.inline.} = (if not setPixelsImpl(tileset, entry, srcdata, srcpitch): raise e)
-proc getTileWidth*(tileset: Tileset): int32 {.tln, importc: "TLN_GetTileWidth".}
-proc getTileHeight*(tileset: Tileset): int32 {.tln, importc: "TLN_GetTileHeight".}
-proc getNumTiles*(tileset: Tileset): int32 {.tln, importc: "TLN_GetTilesetNumTiles".}
+proc setPixels*(tileset: Tileset; entry: int; srcdata: ptr UncheckedArray[uint8]; srcpitch: int) {.inline.} = (if not setPixelsImpl(tileset, cast[int32](entry), srcdata, cast[int32](srcpitch)): raise e)
+proc getTileWidth*(tileset: Tileset): int {.inline.} = getTileWidthImpl(tileset).int
+proc getTileHeight*(tileset: Tileset): int {.inline.} = getTileHeightImpl(tileset).int
+proc getNumTiles*(tileset: Tileset): int {.inline.} = getNumTilesImpl(tileset).int
 proc getPalette*(tileset: Tileset): Palette {.tln, importc: "TLN_GetTilesetPalette".}
 proc getSequencePack*(tileset: Tileset): SequencePack {.tln, importc: "TLN_GetTilesetSequencePack".}
 proc delete*(tileset: Tileset) {.inline.} = (if not deleteImpl(tileset): raise e)
@@ -392,6 +427,9 @@ proc delete*(tileset: Tileset) {.inline.} = (if not deleteImpl(tileset): raise e
 proc createTilemapImpl(rows: int32; cols: int32; tiles: ptr UncheckedArray[Tile]; bgcolor: uint32; tileset: Tileset): Tilemap {.tln, importc: "TLN_CreateTilemap".}
 proc loadTilemapImpl(filename: cstring; layername: cstring = nil): Tilemap {.tln, importc: "TLN_LoadTilemap".}
 proc cloneImpl(src: Tilemap): Tilemap {.tln, importc: "TLN_CloneTilemap".}
+proc getRowsImpl(tilemap: Tilemap): int32 {.tln, importc: "TLN_GetTilemapRows".}
+proc getColsImpl(tilemap: Tilemap): int32 {.tln, importc: "TLN_GetTilemapCols".}
+proc getTilesetImpl(tilemap: Tilemap; index: int32): Tileset {.tln, importc: "TLN_GetTilemapTileset2".}
 proc setTilesetImpl(tilemap: Tilemap; tileset: Tileset): bool {.tln, importc: "TLN_SetTilemapTileset".}
 proc setTilesetImpl(tilemap: Tilemap; tileset: Tileset; index: int32): bool {.tln, importc: "TLN_SetTilemapTileset2".}
 proc getTileImpl(tilemap: Tilemap; row, col: int32; tile: var Tile): bool {.tln, importc: "TLN_GetTilemapTile".}
@@ -399,22 +437,20 @@ proc setTileImpl(tilemap: Tilemap; row, col: int32; tile: ptr Tile): bool {.tln,
 proc copyTilesImpl(src: Tilemap; srcrow, srccol, rows, cols: int32; dst: Tilemap; dstrow, dstcol: int32): bool {.tln, importc: "TLN_CopyTiles".}
 proc deleteImpl(tilemap: Tilemap): bool {.tln, importc: "TLN_DeleteTilemap".}
 
-proc createTilemap*(rows: int32; cols: int32; tiles: ptr UncheckedArray[Tile]; bgcolor: uint32; tileset: Tileset): Tilemap {.inline.} = (result = createTilemapImpl(rows, cols, tiles, bgcolor, tileset); if result == nil: raise e)
+proc createTilemap*(rows, cols: int; tiles: ptr UncheckedArray[Tile]; bgcolor: uint32; tileset: Tileset): Tilemap {.inline.} = (result = createTilemapImpl(rows.int32, cols.int32, tiles, bgcolor, tileset); if result == nil: raise e)
 proc loadTilemap*(filename: cstring; layername: cstring = nil): Tilemap {.inline.} = (result = loadTilemapImpl(filename, layername); if result == nil: raise e)
 proc clone*(src: Tilemap): Tilemap {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
-proc getRows*(tilemap: Tilemap): int32 {.tln, importc: "TLN_GetTilemapRows".}
-proc getCols*(tilemap: Tilemap): int32 {.tln, importc: "TLN_GetTilemapCols".}
+proc getRows*(tilemap: Tilemap): int {.inline.} = getRowsImpl(tilemap).int
+proc getCols*(tilemap: Tilemap): int {.inline.} = getColsImpl(tilemap).int
 proc setTileset*(tilemap: Tilemap; tileset: Tileset) {.inline.} = (if not setTilesetImpl(tilemap, tileset): raise e)
+proc setTileset*(tilemap: Tilemap; tileset: Tileset; index: int) {.inline.} = (if not setTilesetImpl(tilemap, tileset, cast[int32](index)): raise e)
 proc getTileset*(tilemap: Tilemap): Tileset {.tln, importc: "TLN_GetTilemapTileset".}
-proc setTileset*(tilemap: Tilemap; tileset: Tileset; index: int32) {.inline.} = (if not setTilesetImpl(tilemap, tileset, index): raise e)
-proc getTileset*(tilemap: Tilemap; index: int32): Tileset {.tln, importc: "TLN_GetTilemapTileset2".}
-proc getTile*(tilemap: Tilemap; row, col: int32): Tile {.inline.} = (if not getTileImpl(tilemap, row, col, result): raise e)
-proc setTile*(tilemap: Tilemap; row, col: int32; tile: ptr Tile) {.inline.} = (if not setTileImpl(tilemap, row, col, tile): raise e)
-proc setTile*(tilemap: Tilemap; row, col: int32; tile: Tile): bool {.inline, discardable.} = setTile(tilemap, row, col, unsafeAddr tile)
-proc clearTile*(tilemap: Tilemap; row, col: int32; tile: Tile): bool {.inline, discardable.} =
-  ## Same as seting the tile's index & flags to 0.
-  setTile(tilemap, row, col, nil)
-proc copyTiles*(src: Tilemap; srcrow, srccol, rows, cols: int32; dst: Tilemap; dstrow, dstcol: int32) {.inline.} = (if not copyTilesImpl(src, srcrow, srccol, rows, cols, dst, dstrow, dstcol): raise e)
+proc getTileset*(tilemap: Tilemap; index: int): Tileset {.inline.} = getTilesetImpl(tilemap, cast[int32](index))
+proc getTile*(tilemap: Tilemap; row, col: int): Tile {.inline.} = (if not getTileImpl(tilemap, cast[int32](row), cast[int32](col), result): raise e)
+proc setTile*(tilemap: Tilemap; row, col: int; tile: ptr Tile) {.inline.} = (if not setTileImpl(tilemap, cast[int32](row), cast[int32](col), tile): raise e)
+proc setTile*(tilemap: Tilemap; row, col: int; tile: Tile): bool {.inline, discardable.} = setTile(tilemap, cast[int32](row), cast[int32](col), unsafeAddr tile)
+proc clearTile*(tilemap: Tilemap; row, col: int): bool {.inline, discardable.} = setTile(tilemap, cast[int32](row), cast[int32](col), Tile())
+proc copyTiles*(src: Tilemap; srcrow, srccol, rows, cols: int; dst: Tilemap; dstrow, dstcol: int) {.inline.} = (if not copyTilesImpl(src, cast[int32](srcrow), cast[int32](srccol), cast[int32](rows), cast[int32](cols), dst, cast[int32](dstrow), cast[int32](dstcol)): raise e)
 proc delete*(tilemap: Tilemap) {.inline.} = (if not deleteImpl(tilemap): raise e)
 
 # PALETTE
@@ -429,17 +465,18 @@ proc mixPalettesImpl(src1, src2, dst: Palette; factor: uint8): bool {.tln, impor
 proc addColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.tln, importc: "TLN_AddPaletteColor".}
 proc subColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.tln, importc: "TLN_SubPaletteColor".}
 proc modColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.tln, importc: "TLN_ModPaletteColor".}
+proc getDataImpl(palette: Palette; index: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetPaletteData".}
 proc deleteImpl(palette: Palette): bool {.tln, importc: "TLN_DeletePalette".}
 
-proc createPalette*(entries: int32): Palette {.inline.} = (result = createPaletteImpl(entries); if result == nil: raise e)
+proc createPalette*(entries: int): Palette {.inline.} = (result = createPaletteImpl(cast[int32](entries)); if result == nil: raise e)
 proc loadPalette*(filename: cstring): Palette {.inline.} = (result = loadPaletteImpl(filename); if result == nil: raise e)
 proc clone*(src: Palette): Palette {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
-proc setColor*(palette: Palette; color: int32; r, g, b: uint8) {.inline.} = (if not setColorImpl(palette, color, r, g, b): raise e)
+proc setColor*(palette: Palette; color: int; r, g, b: uint8) {.inline.} = (if not setColorImpl(palette, cast[int32](color), r, g, b): raise e)
 proc mixPalettes*(src1, src2, dst: Palette; factor: uint8) {.inline.} = (if not mixPalettesImpl(src1, src2, dst, factor): raise e)
 proc addColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} = (if not addColorImpl(palette, r, g, b, start, num): raise e)
 proc subColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} = (if not subColorImpl(palette, r, g, b, start, num): raise e)
 proc modColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} = (if not modColorImpl(palette, r, g, b, start, num): raise e)
-proc getData*(palette: Palette; index: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetPaletteData".}
+proc getData*(palette: Palette; index: int): ptr UncheckedArray[uint8] {.inline.} = getDataImpl(palette, cast[int32](index))
 proc delete*(palette: Palette) {.inline.} = (if not deleteImpl(palette): raise e)
 
 # BITMAP
@@ -448,18 +485,23 @@ proc delete*(palette: Palette) {.inline.} = (if not deleteImpl(palette): raise e
 
 proc createBitmapImpl(width, height: int32; bpp: int32): Bitmap {.tln, importc: "TLN_CreateBitmap".}
 proc loadBitmapImpl(filename: cstring): Bitmap {.tln, importc: "TLN_LoadBitmap".}
-proc cloneBitmapImpl(src: Bitmap): Bitmap {.tln, importc: "TLN_CloneBitmap".}
+proc cloneImpl(src: Bitmap): Bitmap {.tln, importc: "TLN_CloneBitmap".}
+proc getDataImpl(bitmap: Bitmap; x, y: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetBitmapPtr".}
+proc getWidthImpl(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapWidth".}
+proc getHeightImpl(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapHeight".}
+proc getDepthImpl(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapDepth".}
+proc getPitchImpl(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapPitch".}
 proc setPaletteImpl(bitmap: Bitmap; palette: Palette): bool {.tln, importc: "TLN_SetBitmapPalette".}
 proc deleteImpl(bitmap: Bitmap): bool {.tln, importc: "TLN_DeleteBitmap".}
 
-proc createBitmap*(width, height: int32; bpp: int32): Bitmap {.inline.} = (result = createBitmapImpl(width, height, bpp); if result == nil: raise e)
+proc createBitmap*(width, height: int; bpp: int): Bitmap {.inline.} = (result = createBitmapImpl(cast[int32](width), cast[int32](height), cast[int32](bpp)); if result == nil: raise e)
 proc loadBitmap*(filename: cstring): Bitmap {.inline.} = (result = loadBitmapImpl(filename); if result == nil: raise e)
-proc cloneBitmap*(src: Bitmap): Bitmap {.inline.} = (result = cloneBitmapImpl(src); if result == nil: raise e)
-proc getData*(bitmap: Bitmap; x, y: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetBitmapPtr".}
-proc getWidth*(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapWidth".}
-proc getHeight*(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapHeight".}
-proc getDepth*(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapDepth".}
-proc getPitch*(bitmap: Bitmap): int32 {.tln, importc: "TLN_GetBitmapPitch".}
+proc clone*(src: Bitmap): Bitmap {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
+proc getData*(bitmap: Bitmap; x, y: int): ptr UncheckedArray[uint8] {.inline.} = getDataImpl(bitmap, cast[int32](x), cast[int32](y))
+proc getWidth*(bitmap: Bitmap): int {.inline.} = getWidthImpl(bitmap).int
+proc getHeight*(bitmap: Bitmap): int {.inline.} = getHeightImpl(bitmap).int
+proc getDepth*(bitmap: Bitmap): int {.inline.} = getDepthImpl(bitmap).int
+proc getPitch*(bitmap: Bitmap): int {.inline.} = getPitchImpl(bitmap).int
 proc getPalette*(bitmap: Bitmap): Palette {.tln, importc: "TLN_GetBitmapPalette".}
 proc setPalette*(bitmap: Bitmap; palette: Palette) {.inline.} = (if not setPaletteImpl(bitmap, palette): raise e)
 proc delete*(bitmap: Bitmap) {.inline.} = (if not deleteImpl(bitmap): raise e)
@@ -471,14 +513,15 @@ proc delete*(bitmap: Bitmap) {.inline.} = (if not deleteImpl(bitmap): raise e)
 proc createObjectListImpl(): ObjectList {.tln, importc: "TLN_CreateObjectList".}
 proc loadObjectListImpl(filename, layername: cstring): ObjectList {.tln, importc: "TLN_LoadObjectList".}
 proc cloneImpl(src: ObjectList): ObjectList {.tln, importc: "TLN_CloneObjectList".}
+proc getNumObjectsImpl(list: ObjectList): int32 {.tln, importc: "TLN_GetListNumObjects".}
 proc addTileObjectImpl(list: ObjectList; id, gid, flags: uint16; x, y: int32): bool {.tln, importc: "TLN_AddTileObjectToList".}
 proc deleteImpl(list: ObjectList): bool {.tln, importc: "TLN_DeleteObjectList".}
 
 proc createObjectList*(): ObjectList {.inline.} = (result = createObjectListImpl(); if result == nil: raise e)
 proc loadObjectList*(filename, layername: cstring): ObjectList {.inline.} = (result = loadObjectListImpl(filename, layername); if result == nil: raise e)
 proc clone*(src: ObjectList): ObjectList {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
-proc addTileObject*(list: ObjectList; id, gid, flags: uint16; x, y: int32) {.inline.} = (if not addTileObjectImpl(list, id, gid, flags, x, y): raise e)
-proc getNumObjects*(list: ObjectList): int32 {.tln, importc: "TLN_GetListNumObjects".}
+proc addTileObject*(list: ObjectList; id, gid, flags: uint16; x, y: int) {.inline.} = (if not addTileObjectImpl(list, id, gid, flags, cast[int32](x), cast[int32](y)): raise e)
+proc getNumObjects*(list: ObjectList): int {.inline.} = getNumObjectsImpl(list).int
 proc getObject*(list: ObjectList; info: var ObjectInfo): bool {.tln, importc: "TLN_GetListObject".}
 proc getObject*(list: ObjectList): (ObjectInfo, bool) {.inline.} = result[1] = getObject(list, result[0])
 proc delete*(list: ObjectList) {.inline.} = (if not deleteImpl(list): raise e)
@@ -495,7 +538,7 @@ proc setPaletteImpl(layer: Layer; palette: Palette): bool {.tln, importc: "TLN_S
 proc setPositionImpl(layer: Layer; hstart, vstart: int32): bool {.tln, importc: "TLN_SetLayerPosition".}
 proc setScalingImpl(layer: Layer; xfactor, yfactor: float32): bool {.tln, importc: "TLN_SetLayerScaling".}
 proc setAffineTransformImpl(layer: Layer; affine: ptr Affine): bool {.tln, importc: "TLN_SetLayerAffineTransform".}
-proc setTransformImpl(layer: int32; angle: float32; dx, dy, sx, sy: float32): bool {.tln, importc: "TLN_SetLayerTransform".}
+proc setTransformImpl(layer: Layer; angle: float32; dx, dy, sx, sy: float32): bool {.tln, importc: "TLN_SetLayerTransform".}
 proc setPixelMappingImpl(layer: Layer; table: ptr UncheckedArray[PixelMap]): bool {.tln, importc: "TLN_SetLayerPixelMapping".}
 proc setBlendModeImpl(layer: Layer; mode: Blend; factor: uint8): bool {.tln, importc: "TLN_SetLayerBlendMode".}
 proc setColumnOffsetImpl(layer: Layer; offset: ptr UncheckedArray[int32]): bool {.tln, importc: "TLN_SetLayerColumnOffset".}
@@ -506,35 +549,33 @@ proc disableMosaicImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayerMosa
 proc resetLayerModeImpl(layer: Layer): bool {.tln, importc: "TLN_ResetLayerMode".}
 proc setObjectsImpl(layer: Layer; objects: ObjectList; tileset: Tileset): bool {.tln, importc: "TLN_SetLayerObjects".}
 proc setPriorityImpl(layer: Layer; enable: bool): bool {.tln, importc: "TLN_SetLayerPriority".}
-proc setParentImpl(layer: Layer; parent: int32): bool {.tln, importc: "TLN_SetLayerParent".}
-proc disableParentImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayerParent".}
 proc disableImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayer".}
 proc enableImpl(layer: Layer): bool {.tln, importc: "TLN_EnableLayer".}
 proc getTileInfoImpl(layer: Layer; x, y: int32; info: var TileInfo): bool {.tln, importc: "TLN_GetLayerTile".}
+proc getWidthImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerWidth".}
+proc getHeightImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerHeight".}
 proc setParallaxFactorImpl(layer: Layer; x, y: float32): bool {.tln, importc: "TLN_SetLayerParallaxFactor".}
 
 proc setTilemap*(layer: Layer; tilemap: Tilemap) {.inline.} = (if not setTilemapImpl(layer, tilemap): raise e)
 proc setBitmap*(layer: Layer; bitmap: Bitmap) {.inline.} = (if not setBitmapImpl(layer, bitmap): raise e)
 proc setPalette*(layer: Layer; palette: Palette) {.inline.} = (if not setPaletteImpl(layer, palette): raise e)
-proc setPosition*(layer: Layer; hstart, vstart: int32) {.inline.} = (if not setPositionImpl(layer, hstart, vstart): raise e)
+proc setPosition*(layer: Layer; hstart, vstart: int) {.inline.} = (if not setPositionImpl(layer, cast[int32](hstart), cast[int32](vstart)): raise e)
 proc setScaling*(layer: Layer; xfactor, yfactor: float32) {.inline.} = (if not setScalingImpl(layer, xfactor, yfactor): raise e)
 proc setAffineTransform*(layer: Layer; affine: ptr Affine) {.inline.} = (if not setAffineTransformImpl(layer, affine): raise e)
 proc setAffineTransform*(layer: Layer; affine: Affine): bool {.inline, discardable.} = setAffineTransform(layer, unsafeAddr affine)
 proc disableAffineTransform*(layer: Layer): bool {.inline, discardable.} = setAffineTransform(layer, nil)
-proc setTransform*(layer: int32; angle: float32; dx, dy, sx, sy: float32) {.inline.} = (if not setTransformImpl(layer, angle, dx, dy, sx, sy): raise e)
+proc setTransform*(layer: Layer; angle: float32; dx, dy, sx, sy: float32) {.inline.} = (if not setTransformImpl(layer, angle, dx, dy, sx, sy): raise e)
 proc setPixelMapping*(layer: Layer; table: ptr UncheckedArray[PixelMap]) {.inline.} = (if not setPixelMappingImpl(layer, table): raise e)
 proc disablePixelMapping*(layer: Layer): bool {.inline, discardable.} = setPixelMapping(layer, nil)
 proc setBlendMode*(layer: Layer; mode: Blend; factor: uint8) {.inline.} = (if not setBlendModeImpl(layer, mode, factor): raise e)
 proc setColumnOffset*(layer: Layer; offset: ptr UncheckedArray[int32]) {.inline.} = (if not setColumnOffsetImpl(layer, offset): raise e)
-proc setClip*(layer: Layer; x1, y1, x2, y2: int32) {.inline.} = (if not setClipImpl(layer, x1, y1, x2, y2): raise e)
+proc setClip*(layer: Layer; x1, y1, x2, y2: int) {.inline.} = (if not setClipImpl(layer, cast[int32](x1), cast[int32](y1), cast[int32](x2), cast[int32](y2)): raise e)
 proc disableClip*(layer: Layer) {.inline.} = (if not disableClipImpl(layer): raise e)
-proc setMosaic*(layer: Layer; width, height: int32) {.inline.} = (if not setMosaicImpl(layer, width, height): raise e)
+proc setMosaic*(layer: Layer; width, height: int) {.inline.} = (if not setMosaicImpl(layer, cast[int32](width), cast[int32](height)): raise e)
 proc disableMosaic*(layer: Layer) {.inline.} = (if not disableMosaicImpl(layer): raise e)
 proc resetLayerMode*(layer: Layer) {.inline.} = (if not resetLayerModeImpl(layer): raise e)
 proc setObjects*(layer: Layer; objects: ObjectList; tileset: Tileset) {.inline.} = (if not setObjectsImpl(layer, objects, tileset): raise e)
 proc setPriority*(layer: Layer; enable: bool) {.inline.} = (if not setPriorityImpl(layer, enable): raise e)
-proc setParent*(layer: Layer; parent: int32) {.inline.} = (if not setParentImpl(layer, parent): raise e)
-proc disableParent*(layer: Layer) {.inline.} = (if not disableParentImpl(layer): raise e)
 proc disable*(layer: Layer) {.inline.} = (if not disableImpl(layer): raise e)
 proc enable*(layer: Layer) {.inline.} = (if not enableImpl(layer): raise e)
 proc getType*(layer: Layer): LayerType {.tln, importc: "TLN_GetLayerType".}
@@ -543,9 +584,9 @@ proc getTileset*(layer: Layer): Tileset {.tln, importc: "TLN_GetLayerTileset".}
 proc getTilemap*(layer: Layer): Tilemap {.tln, importc: "TLN_GetLayerTilemap".}
 proc getBitmap*(layer: Layer): Bitmap {.tln, importc: "TLN_GetLayerBitmap".}
 proc getObjects*(layer: Layer): ObjectList {.tln, importc: "TLN_GetLayerObjects".}
-proc getTileInfo*(layer: Layer; x, y: int32): TileInfo {.inline.} = (if not getTileInfoImpl(layer, x, y, result): raise e)
-proc getWidth*(layer: Layer): int32 {.tln, importc: "TLN_GetLayerWidth".}
-proc getHeight*(layer: Layer): int32 {.tln, importc: "TLN_GetLayerHeight".}
+proc getTileInfo*(layer: Layer; x, y: int): TileInfo {.inline.} = (if not getTileInfoImpl(layer, cast[int32](x), cast[int32](y), result): raise e)
+proc getWidth*(layer: Layer): int {.inline.} = getWidthImpl(layer).int
+proc getHeight*(layer: Layer): int {.inline.} = getHeightImpl(layer).int
 proc setParallaxFactor*(layer: Layer; x, y: float32) {.inline.} = (if not setParallaxFactorImpl(layer, x, y): raise e)
 
 # SPRITE
@@ -557,7 +598,7 @@ type Sprite* = distinct int32
 proc configSpriteImpl(sprite: Sprite; spriteset: Spriteset; flags: uint32): bool {.tln, importc: "TLN_ConfigSprite".}
 proc setSpriteSetImpl(sprite: Sprite; spriteset: Spriteset): bool {.tln, importc: "TLN_SetSpriteSet".}
 proc setFlagsImpl(sprite: Sprite; flags: uint32): bool {.tln, importc: "TLN_SetSpriteFlags".}
-proc enableFlagImpl(sprite: Sprite; flag: uint32; enable: bool): bool {.tln, importc: "TLN_EnableSpriteFlag".}
+proc enableFlagsImpl(sprite: Sprite; flag: uint32; enable: bool): bool {.tln, importc: "TLN_EnableSpriteFlag".}
 proc setPivotImpl(sprite: Sprite; px, py: float32): bool {.tln, importc: "TLN_SetSpritePivot".}
 proc setPositionImpl(sprite: Sprite; x, y: int32): bool {.tln, importc: "TLN_SetSpritePosition".}
 proc setPictureImpl(sprite: Sprite; entry: int32): bool {.tln, importc: "TLN_SetSpritePicture".}
@@ -565,11 +606,13 @@ proc setPaletteImpl(sprite: Sprite; palette: Palette): bool {.tln, importc: "TLN
 proc setBlendModeImpl(sprite: Sprite; mode: Blend; factor: uint8): bool {.tln, importc: "TLN_SetSpriteBlendMode".}
 proc setScalingImpl(sprite: Sprite; sx: float32; sy: float32): bool {.tln, importc: "TLN_SetSpriteScaling".}
 proc resetScalingImpl(sprite: Sprite): bool {.tln, importc: "TLN_ResetSpriteScaling".}
+proc getSpritePictureImpl(sprite: Sprite): int32 {.tln, importc: "TLN_GetSpritePicture".}
+proc getAvailableSpriteImpl(): int32 {.tln, importc: "TLN_GetAvailableSprite".}
 proc enableCollisionImpl(sprite: Sprite; enable: bool): bool {.tln, importc: "TLN_EnableSpriteCollision".}
 proc getStateImpl(sprite: Sprite; state: var SpriteState): bool {.tln, importc: "TLN_GetSpriteState".}
 proc setFirstSpriteImpl(sprite: Sprite): bool {.tln, importc: "TLN_SetFirstSprite".}
 proc setNextSpriteImpl(sprite, next: Sprite): bool {.tln, importc: "TLN_SetNextSprite".}
-proc enableMaskingImpl(sprite: Sprite; enable: bool): bool {.tln, importc: "TLN_EnableSpriteMasking".}
+proc setSpritesMaskRegionImpl(topLine, bottomLine: int32) {.tln, importc: "TLN_SetSpritesMaskRegion".}
 proc setAnimationImpl(sprite: Sprite; sequence: Sequence; loop: int32): bool {.tln, importc: "TLN_SetSpriteAnimation".}
 proc disableAnimationImpl(sprite: Sprite): bool {.tln, importc: "TLN_DisableSpriteAnimation".}
 proc pauseAnimationImpl(sprite: Sprite): bool {.tln, importc: "TLN_PauseSpriteAnimation".}
@@ -577,29 +620,29 @@ proc resumeAnimationImpl(sprite: Sprite): bool {.tln, importc: "TLN_ResumeSprite
 proc disableImpl(sprite: Sprite): bool {.tln, importc: "TLN_DisableSprite".}
 proc getPaletteImpl(sprite: Sprite): Palette {.tln, importc: "TLN_GetSpritePalette".}
 
-proc configSprite*(sprite: Sprite; spriteset: Spriteset; flags: uint32) {.inline.} = (if not configSpriteImpl(sprite, spriteset, flags): raise e)
+proc configSprite*(sprite: Sprite; spriteset: Spriteset; flags: set[SpriteFlag]) {.inline.} = (if not configSpriteImpl(sprite, spriteset, spr(flags)): raise e)
 proc setSpriteSet*(sprite: Sprite; spriteset: Spriteset) {.inline.} = (if not setSpriteSetImpl(sprite, spriteset): raise e)
-proc setFlags*(sprite: Sprite; flags: uint32) {.inline.} = (if not setFlagsImpl(sprite, flags): raise e)
-proc enableFlag*(sprite: Sprite; flag: uint32; enable: bool) {.inline.} = (if not enableFlagImpl(sprite, flag, enable): raise e)
+proc setFlags*(sprite: Sprite; flags: set[SpriteFlag]) {.inline.} = (if not setFlagsImpl(sprite, spr(flags)): raise e)
+proc enableFlags*(sprite: Sprite; flags: set[SpriteFlag]) {.inline.} = (if not enableFlagsImpl(sprite, spr(flags), true): raise e)
+proc disableFlags*(sprite: Sprite; flags: set[SpriteFlag]) {.inline.} = (if not enableFlagsImpl(sprite, spr(flags), false): raise e)
 proc setPivot*(sprite: Sprite; px, py: float32) {.inline.} = (if not setPivotImpl(sprite, px, py): raise e)
-proc setPosition*(sprite: Sprite; x, y: int32) {.inline.} = (if not setPositionImpl(sprite, x, y): raise e)
-proc setPicture*(sprite: Sprite; entry: int32) {.inline.} = (if not setPictureImpl(sprite, entry): raise e)
+proc setPosition*(sprite: Sprite; x, y: int) {.inline.} = (if not setPositionImpl(sprite, cast[int32](x), cast[int32](y)): raise e)
+proc setPicture*(sprite: Sprite; entry: int) {.inline.} = (if not setPictureImpl(sprite, cast[int32](entry)): raise e)
 proc setPalette*(sprite: Sprite; palette: Palette) {.inline.} = (if not setPaletteImpl(sprite, palette): raise e)
 proc setBlendMode*(sprite: Sprite; mode: Blend; factor: uint8) {.inline.} = (if not setBlendModeImpl(sprite, mode, factor): raise e)
-proc setScaling*(sprite: Sprite; sx: float32; sy: float32) {.inline.} = (if not setScalingImpl(sprite, sx, sy): raise e)
+proc setScaling*(sprite: Sprite; sx, sy: float32) {.inline.} = (if not setScalingImpl(sprite, sx, sy): raise e)
 proc resetScaling*(sprite: Sprite) {.inline.} = (if not resetScalingImpl(sprite): raise e)
 # proc setRotation*(sprite: Sprite; angle: float32): bool {.tln, importc: "TLN_SetSpriteRotation".}
 # proc resetRotation*(sprite: Sprite): bool {.tln, importc: "TLN_ResetSpriteRotation".}
-proc getSpritePicture*(sprite: Sprite): int32 {.tln, importc: "TLN_GetSpritePicture".}
-proc getAvailableSprite*(): int32 {.tln, importc: "TLN_GetAvailableSprite".}
+proc getSpritePicture*(sprite: Sprite): int {.inline.} = getSpritePictureImpl(sprite).int
+proc getAvailableSprite*(): int {.inline.} = getAvailableSpriteImpl().int
 proc enableCollision*(sprite: Sprite; enable: bool) {.inline.} = (if not enableCollisionImpl(sprite, enable): raise e)
 proc getCollision*(sprite: Sprite): bool {.tln, importc: "TLN_GetSpriteCollision".}
 proc getState*(sprite: Sprite): SpriteState {.inline.} = (if not getStateImpl(sprite, result): raise e)
 proc setFirstSprite*(sprite: Sprite) {.inline.} = (if not setFirstSpriteImpl(sprite): raise e)
 proc setNextSprite*(sprite, next: Sprite) {.inline.} = (if not setNextSpriteImpl(sprite, next): raise e)
-proc enableMasking*(sprite: Sprite; enable: bool) {.inline.} = (if not enableMaskingImpl(sprite, enable): raise e)
-proc setSpritesMaskRegion*(topLine, bottomLine: int32) {.tln, importc: "TLN_SetSpritesMaskRegion".}
-proc setAnimation*(sprite: Sprite; sequence: Sequence; loop: int32) {.inline.} = (if not setAnimationImpl(sprite, sequence, loop): raise e)
+proc setSpritesMaskRegion*(topLine, bottomLine: int) {.inline.} = setSpritesMaskRegion(cast[int32](topLine), cast[int32](bottomLine))
+proc setAnimation*(sprite: Sprite; sequence: Sequence; loop: int) {.inline.} = (if not setAnimationImpl(sprite, sequence, cast[int32](loop)): raise e)
 proc disableAnimation*(sprite: Sprite) {.inline.} = (if not disableAnimationImpl(sprite): raise e)
 proc pauseAnimation*(sprite: Sprite) {.inline.} = (if not pauseAnimationImpl(sprite): raise e)
 proc resumeAnimation*(sprite: Sprite) {.inline.} = (if not resumeAnimationImpl(sprite): raise e)
@@ -610,15 +653,15 @@ proc getPalette*(sprite: Sprite): Palette {.inline.} = (result = getPaletteImpl(
 # --------
 # Sequence resources management for layer, sprite and palette animations
 
-proc createSequenceImpl(name: cstring; target: int32; numFrames: int32; frames: ptr UncheckedArray[SequenceFrame]): Sequence {.tln, importc: "TLN_CreateSequence".}
+proc createSequenceImpl(name: cstring; target, numFrames: int32; frames: ptr UncheckedArray[SequenceFrame]): Sequence {.tln, importc: "TLN_CreateSequence".}
 proc createCycleImpl(name: cstring; numStrips: int32; strips: ptr UncheckedArray[ColorStrip]): Sequence {.tln, importc: "TLN_CreateCycle".}
 proc createSpriteSequenceImpl(name: cstring; spriteset: Spriteset; basename: cstring; delay: int32): Sequence {.tln, importc: "TLN_CreateSpriteSequence".}
 proc cloneImpl(src: Sequence): Sequence {.tln, importc: "TLN_CloneSequence".}
 proc getInfoImpl(sequence: Sequence; info: var SequenceInfo): bool {.tln, importc: "TLN_GetSequenceInfo".}
 proc deleteImpl(sequence: Sequence): bool {.tln, importc: "TLN_DeleteSequence".}
 
-proc createSequence*(name: cstring; target: int32; numFrames: int32; frames: ptr UncheckedArray[SequenceFrame]): Sequence {.inline.} = (result = createSequenceImpl(name, target, numFrames, frames); if result == nil: raise e)
-proc createCycle*(name: cstring; numStrips: int32; strips: ptr UncheckedArray[ColorStrip]): Sequence {.inline.} = (result = createCycleImpl(name, numStrips, strips); if result == nil: raise e)
+proc createSequence*(name: cstring; target, numFrames: int; frames: ptr UncheckedArray[SequenceFrame]): Sequence {.inline.} = (result = createSequenceImpl(name, cast[int32](target), cast[int32](numFrames), frames); if result == nil: raise e)
+proc createCycle*(name: cstring; numStrips: int; strips: ptr UncheckedArray[ColorStrip]): Sequence {.inline.} = (result = createCycleImpl(name, cast[int32](numStrips), strips); if result == nil: raise e)
 proc createSpriteSequence*(name: cstring; spriteset: Spriteset; basename: cstring; delay: int32): Sequence {.inline.} = (result = createSpriteSequenceImpl(name, spriteset, basename, delay); if result == nil: raise e)
 proc clone*(src: Sequence): Sequence {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
 proc getInfo*(sequence: Sequence): SequenceInfo {.inline.} = (if not getInfoImpl(sequence, result): raise e)
@@ -632,14 +675,15 @@ proc createSequencePackImpl(): SequencePack {.tln, importc: "TLN_CreateSequenceP
 proc loadSequencePackImpl(filename: cstring): SequencePack {.tln, importc: "TLN_LoadSequencePack".}
 proc getSequenceImpl(sp: SequencePack; index: int32): Sequence {.tln, importc: "TLN_GetSequence".}
 proc findSequenceImpl(sp: SequencePack; name: cstring): Sequence {.tln, importc: "TLN_FindSequence".}
+proc getCountImpl(sp: SequencePack): int32 {.tln, importc: "TLN_GetSequencePackCount".}
 proc addSequenceImpl(sp: SequencePack; sequence: Sequence): bool {.tln, importc: "TLN_AddSequenceToPack".}
 proc deleteImpl(sp: SequencePack): bool {.tln, importc: "TLN_DeleteSequencePack".}
 
 proc createSequencePack*(): SequencePack {.inline.} = (result = createSequencePackImpl(); if result == nil: raise e)
 proc loadSequencePack*(filename: cstring): SequencePack {.inline.} = (result = loadSequencePackImpl(filename); if result == nil: raise e)
-proc getSequence*(sp: SequencePack; index: int32): Sequence {.inline.} = (result = getSequenceImpl(sp, index); if result == nil: raise e)
+proc getSequence*(sp: SequencePack; index: int): Sequence {.inline.} = (result = getSequenceImpl(sp, cast[int32](index)); if result == nil: raise e)
 proc findSequence*(sp: SequencePack; name: cstring): Sequence {.inline.} = (result = findSequenceImpl(sp, name); if result == nil: raise e)
-proc getCount*(sp: SequencePack): int32 {.tln, importc: "TLN_GetSequencePackCount".}
+proc getCount*(sp: SequencePack): int {.inline.} = getCountImpl(sp).int
 proc addSequence*(sp: SequencePack; sequence: Sequence) {.inline.} = (if not addSequenceImpl(sp, sequence): raise e)
 proc delete*(sp: SequencePack) {.inline.} = (if not deleteImpl(sp): raise e)
 
@@ -649,25 +693,27 @@ proc delete*(sp: SequencePack) {.inline.} = (if not deleteImpl(sp): raise e)
 
 proc setPaletteAnimationImpl(index: int32; palette: Palette; sequence: Sequence; blend: bool): bool {.tln, importc: "TLN_SetPaletteAnimation".}
 proc setPaletteAnimationSourceImpl(index: int32; a2: Palette): bool {.tln, importc: "TLN_SetPaletteAnimationSource".}
+proc getAnimationStateImpl(index: int32): bool {.tln, importc: "TLN_GetAnimationState".}
 proc setAnimationDelayImpl(index, frame, delay: int32): bool {.tln, importc: "TLN_SetAnimationDelay".}
+proc getAvailableAnimationImpl(): int32 {.tln, importc: "TLN_GetAvailableAnimation".}
 proc disablePaletteAnimationImpl(index: int32): bool {.tln, importc: "TLN_DisablePaletteAnimation".}
 
-proc setPaletteAnimation*(index: int32; palette: Palette; sequence: Sequence; blend: bool) {.inline.} = (if not setPaletteAnimationImpl(index, palette, sequence, blend): raise e)
-proc setPaletteAnimationSource*(index: int32; a2: Palette) {.inline.} = (if not setPaletteAnimationSourceImpl(index, a2): raise e)
-proc getAnimationState*(index: int32): bool {.tln, importc: "TLN_GetAnimationState".}
-proc setAnimationDelay*(index, frame, delay: int32) {.inline.} = (if not setAnimationDelayImpl(index, frame, delay): raise e)
-proc getAvailableAnimation*(): int32 {.tln, importc: "TLN_GetAvailableAnimation".}
-proc disablePaletteAnimation*(index: int32) {.inline.} = (if not disablePaletteAnimationImpl(index): raise e)
+proc setPaletteAnimation*(index: int; palette: Palette; sequence: Sequence; blend: bool) {.inline.} = (if not setPaletteAnimationImpl(cast[int32](index), palette, sequence, blend): raise e)
+proc setPaletteAnimationSource*(index: int; a2: Palette) {.inline.} = (if not setPaletteAnimationSourceImpl(cast[int32](index), a2): raise e)
+proc getAnimationState*(index: int): bool {.inline.} = getAnimationStateImpl(cast[int32](index))
+proc setAnimationDelay*(index, frame, delay: int) {.inline.} = (if not setAnimationDelayImpl(cast[int32](index), cast[int32](frame), cast[int32](delay)): raise e)
+proc getAvailableAnimation*(): int {.inline.} = getAvailableAnimationImpl().int
+proc disablePaletteAnimation*(index: int) {.inline.} = (if not disablePaletteAnimationImpl(cast[int32](index)): raise e)
 
 # WORLD
 # -----
 # World management
 
 proc loadWorldImpl(tmxfile: cstring; firstLayer: int32): bool {.tln, importc: "TLN_LoadWorld".}
-proc setSpriteWorldPositionImpl(nsprite: int32; x, y: int32): bool {.tln, importc: "TLN_SetSpriteWorldPosition".}
+proc setWorldPositionImpl(x, y: int32) {.tln, importc: "TLN_SetWorldPosition".}
+proc setWorldPositionImpl(sprite: Sprite; x, y: int32): bool {.tln, importc: "TLN_SetSpriteWorldPosition".}
 
-proc loadWorld*(tmxfile: cstring; firstLayer: int32) {.inline.} = (if not loadWorldImpl(tmxfile, firstLayer): raise e)
-proc setWorldPosition*(x, y: int32) {.tln, importc: "TLN_SetWorldPosition".}
-proc setSpriteWorldPosition*(nsprite: int32; x, y: int32) {.inline.} = (if not setSpriteWorldPositionImpl(nsprite, x, y): raise e)
+proc loadWorld*(tmxfile: cstring; firstLayer: int) {.inline.} = (if not loadWorldImpl(tmxfile, cast[int32](firstLayer)): raise e)
+proc setWorldPosition*(x, y: int) {.inline.} = setWorldPositionImpl(cast[int32](x), cast[int32](y))
+proc setWorldPosition*(sprite: Sprite; x, y: int) {.inline.} = (if not setWorldPositionImpl(sprite, cast[int32](x), cast[int32](y)): raise e)
 proc releaseWorld*() {.tln, importc: "TLN_ReleaseWorld".}
-

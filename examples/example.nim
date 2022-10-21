@@ -7,7 +7,7 @@ let engine = init(400, 240, numLayers = 1, numSprites = 0, numAnimations = 0)
 let map = loadTilemap("assets/forest/map.tmx")
 
 # Modify a tile
-let (x, y) = (10'i32, 12'i32)
+let (x, y) = (10, 12)
 var tile = map.getTile(y, x)
 tile.flipx = true
 map.setTile(y, x, tile)
