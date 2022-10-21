@@ -12,8 +12,8 @@ elif defined(MacOSX):
 const
   TilengineVerMaj* = 2
   TilengineVerMin* = 11
-  TilengineVerRev* = 1
-  TilengineHeaderVersion* = ((TilengineVerMaj shl 16) or (TilengineVerMin shl 8) or TilengineVerRev)
+  TilengineVerRev* = 2
+  NimTilengineVersion* = (TilengineVerMaj, TilengineVerMin, TilengineVerRev)
 
 type
   Blend* {.size: 4.} = enum
@@ -307,7 +307,7 @@ proc getWidth*(): int {.inline.} = getWidthImpl().int
 proc getHeight*(): int {.inline.} = getHeightImpl().int
 proc getNumObjects*(): int {.inline.} = getNumObjectsImpl().int
 proc getUsedMemory*(): int {.inline.} = getUsedMemoryImpl().int
-proc getVersion*(): int {.inline.} = getVersionImpl().int
+proc getVersion*(): (int, int, int) {.inline.} = (let v = getVersionImpl(); result = ((v shr 16).int, ((v shr 8) and 0xff).int, (v and 0xff).int))
 proc getNumLayers*(): int {.inline.} = getNumLayersImpl().int
 proc getNumSprites*(): int {.inline.} = getNumSpritesImpl().int
 proc setBgColor*(r, g, b: uint8) {.tln, importc: "TLN_SetBGColor".}

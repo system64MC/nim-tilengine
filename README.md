@@ -70,4 +70,4 @@ cd examples
 nim c -r example.nim
 ```
 
-Any questions, just send an email to the public mailing list at [~exelotl/public-inbox@lists.sr.ht](mailto:~exelotl/public-inbox@lists.sr.ht).
+Any questions, just send an email to the public mailing list at [~exelotl/public-inbox@lists.sr.ht](mailto:~exelotl/public-inbox@lists.sr.ht). You can also send contributions, see [git-send-email.io](https://git-send-email.io/) to learn how!
