@@ -10,7 +10,7 @@ elif defined(MacOSX):
 {.pragma: tln, dynlib:libname, cdecl.}
 
 const
-  TilengineVersion* = (2, 11, 2)
+  TilengineVersion* = (2, 13, 2)
     ## The version of Tilengine these bindings were made for `(major, minor, patch)`.
     ## 
     ## Use `getVersion` to get the actual version of the shared lib for comparison.
@@ -53,6 +53,7 @@ type
 
 {.push inline.}
 
+func palette*(t: Tile): int = ((t.flags and 0x00e0) shr 5).int
 func tileset*(t: Tile): int = ((t.flags and 0x0700) shr 8).int
 func masked*(t: Tile): bool = (t.flags and 0x0800) != 0
 func priority*(t: Tile): bool = (t.flags and 0x1000) != 0
@@ -60,6 +61,7 @@ func rotate*(t: Tile): bool = (t.flags and 0x2000) != 0
 func flipy*(t: Tile): bool = (t.flags and 0x4000) != 0
 func flipx*(t: Tile): bool = (t.flags and 0x8000) != 0
 
+func `palette=`*(t: var Tile; val: int) =  t.flags = ((val.uint16 shl 5) and 0x00e0) or (t.flags and not 0x00e0'u16)
 func `tileset=`*(t: var Tile; val: int) =  t.flags = ((val.uint16 shl 8) and 0x0700) or (t.flags and not 0x0700'u16)
 func `masked=`*(t: var Tile; val: bool) =  t.flags = (val.uint16 shl 11) or (t.flags and not 0x0800'u16)
 func `priority=`*(t: var Tile; val: bool) =  t.flags = (val.uint16 shl 12) or (t.flags and not 0x1000'u16)
@@ -292,9 +294,11 @@ proc getNumSpritesImpl(): int32 {.tln, importc: "TLN_GetNumSprites".}
 proc setBgColorFromTilemapImpl(tilemap: Tilemap): bool {.tln, importc: "TLN_SetBGColorFromTilemap".}
 proc setBgBitmapImpl(bitmap: Bitmap): bool {.tln, importc: "TLN_SetBGBitmap".}
 proc setBgPaletteImpl(palette: Palette): bool {.tln, importc: "TLN_SetBGPalette".}
+proc setGlobalPaletteImpl(index: int32; palette: Palette): bool {.tln, importc: "TLN_SetGlobalPalette".}
 proc setRenderTargetImpl(data: ptr UncheckedArray[uint8]; pitch: int32) {.tln, importc: "TLN_SetRenderTarget".}
 proc updateFrameImpl(frame: int32) {.tln, importc: "TLN_UpdateFrame".}
 proc openResourcePackImpl(filename, key: cstring): bool {.tln, importc: "TLN_OpenResourcePack".}
+proc getGlobalPaletteImpl(index: int32): Palette {.tln, importc: "TLN_SetGlobalPalette".}
 
 proc init*(hres, vres, numLayers, numSprites, numAnimations: int): Engine {.inline.} = (result = initImpl(hres.int32, vres.int32, numLayers.int32, numSprites.int32, numAnimations.int32); if result == nil: raise e)
 proc deinit*() {.tln, importc: "TLN_Deinit".}
@@ -313,6 +317,8 @@ proc setBgColorFromTilemap*(tilemap: Tilemap) {.inline.} = (if not setBgColorFro
 proc disableBgColor*() {.tln, importc: "TLN_DisableBGColor".}
 proc setBgBitmap*(bitmap: Bitmap) {.inline.} = (if not setBgBitmapImpl(bitmap): raise e)
 proc setBgPalette*(palette: Palette) {.inline.} = (if not setBgPaletteImpl(palette): raise e)
+proc setGlobalPalette*(index: int; palette: Palette) {.inline.} = (if not setGlobalPaletteImpl(cast[int32](index), palette): raise e)
+proc getGlobalPalette*(index: int): Palette {.inline.} = (result = getGlobalPaletteImpl(cast[int32](index)); if result == nil: raise e)
 proc setRasterCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetRasterCallback".}
 proc setFrameCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetFrameCallback".}
 proc setRenderTarget*(data: ptr UncheckedArray[uint8]; pitch: int) {.inline.} = setRenderTargetImpl(data, cast[int32](pitch))
@@ -425,6 +431,7 @@ proc setTilesetImpl(tilemap: Tilemap; tileset: Tileset; index: int32): bool {.tl
 proc getTileImpl(tilemap: Tilemap; row, col: int32; tile: var Tile): bool {.tln, importc: "TLN_GetTilemapTile".}
 proc setTileImpl(tilemap: Tilemap; row, col: int32; tile: ptr Tile): bool {.tln, importc: "TLN_SetTilemapTile".}
 proc copyTilesImpl(src: Tilemap; srcrow, srccol, rows, cols: int32; dst: Tilemap; dstrow, dstcol: int32): bool {.tln, importc: "TLN_CopyTiles".}
+proc getTilesImpl(tilemap: Tilemap; row, col: int32): ptr UncheckedArray[Tile] {.tln, importc: "TLN_GetTilemapTiles".}
 proc deleteImpl(tilemap: Tilemap): bool {.tln, importc: "TLN_DeleteTilemap".}
 
 proc createTilemap*(rows, cols: int; tiles: ptr UncheckedArray[Tile]; bgcolor: uint32; tileset: Tileset): Tilemap {.inline.} = (result = createTilemapImpl(rows.int32, cols.int32, tiles, bgcolor, tileset); if result == nil: raise e)
@@ -441,6 +448,8 @@ proc setTile*(tilemap: Tilemap; row, col: int; tile: ptr Tile) {.inline.} = (if 
 proc setTile*(tilemap: Tilemap; row, col: int; tile: Tile): bool {.inline, discardable.} = setTile(tilemap, cast[int32](row), cast[int32](col), unsafeAddr tile)
 proc clearTile*(tilemap: Tilemap; row, col: int): bool {.inline, discardable.} = setTile(tilemap, cast[int32](row), cast[int32](col), Tile())
 proc copyTiles*(src: Tilemap; srcrow, srccol, rows, cols: int; dst: Tilemap; dstrow, dstcol: int) {.inline.} = (if not copyTilesImpl(src, cast[int32](srcrow), cast[int32](srccol), cast[int32](rows), cast[int32](cols), dst, cast[int32](dstrow), cast[int32](dstcol)): raise e)
+proc getTiles*(tilemap: Tilemap; row = 0, col = 0): ptr UncheckedArray[Tile] = (result = getTilesImpl(tilemap, cast[int32](row), cast[int32](col)); if result == nil: raise e)
+
 proc delete*(tilemap: Tilemap) {.inline.} = (if not deleteImpl(tilemap): raise e)
 
 # PALETTE
@@ -544,6 +553,8 @@ proc enableImpl(layer: Layer): bool {.tln, importc: "TLN_EnableLayer".}
 proc getTileInfoImpl(layer: Layer; x, y: int32; info: var TileInfo): bool {.tln, importc: "TLN_GetLayerTile".}
 proc getWidthImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerWidth".}
 proc getHeightImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerHeight".}
+proc getXImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerX".}
+proc getYImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerY".}
 proc setParallaxFactorImpl(layer: Layer; x, y: float32): bool {.tln, importc: "TLN_SetLayerParallaxFactor".}
 
 proc setTilemap*(layer: Layer; tilemap: Tilemap) {.inline.} = (if not setTilemapImpl(layer, tilemap): raise e)
@@ -577,6 +588,8 @@ proc getObjects*(layer: Layer): ObjectList {.tln, importc: "TLN_GetLayerObjects"
 proc getTileInfo*(layer: Layer; x, y: int): TileInfo {.inline.} = (if not getTileInfoImpl(layer, cast[int32](x), cast[int32](y), result): raise e)
 proc getWidth*(layer: Layer): int {.inline.} = getWidthImpl(layer).int
 proc getHeight*(layer: Layer): int {.inline.} = getHeightImpl(layer).int
+proc getX*(layer: Layer): int {.inline.} = getXImpl(layer).int
+proc getY*(layer: Layer): int {.inline.} = getYImpl(layer).int
 proc setParallaxFactor*(layer: Layer; x, y: float32) {.inline.} = (if not setParallaxFactorImpl(layer, x, y): raise e)
 
 # SPRITE
@@ -596,7 +609,9 @@ proc setPaletteImpl(sprite: Sprite; palette: Palette): bool {.tln, importc: "TLN
 proc setBlendModeImpl(sprite: Sprite; mode: Blend; factor: uint8): bool {.tln, importc: "TLN_SetSpriteBlendMode".}
 proc setScalingImpl(sprite: Sprite; sx: float32; sy: float32): bool {.tln, importc: "TLN_SetSpriteScaling".}
 proc resetScalingImpl(sprite: Sprite): bool {.tln, importc: "TLN_ResetSpriteScaling".}
-proc getSpritePictureImpl(sprite: Sprite): int32 {.tln, importc: "TLN_GetSpritePicture".}
+proc getPictureImpl(sprite: Sprite): int32 {.tln, importc: "TLN_GetSpritePicture".}
+proc getXImpl(sprite: Sprite): int32 {.tln, importc: "TLN_GetSpriteX".}
+proc getYImpl(sprite: Sprite): int32 {.tln, importc: "TLN_GetSpriteY".}
 proc getAvailableSpriteImpl(): int32 {.tln, importc: "TLN_GetAvailableSprite".}
 proc enableCollisionImpl(sprite: Sprite; enable: bool): bool {.tln, importc: "TLN_EnableSpriteCollision".}
 proc getStateImpl(sprite: Sprite; state: var SpriteState): bool {.tln, importc: "TLN_GetSpriteState".}
@@ -624,7 +639,9 @@ proc setScaling*(sprite: Sprite; sx, sy: float32) {.inline.} = (if not setScalin
 proc resetScaling*(sprite: Sprite) {.inline.} = (if not resetScalingImpl(sprite): raise e)
 # proc setRotation*(sprite: Sprite; angle: float32): bool {.tln, importc: "TLN_SetSpriteRotation".}
 # proc resetRotation*(sprite: Sprite): bool {.tln, importc: "TLN_ResetSpriteRotation".}
-proc getSpritePicture*(sprite: Sprite): int {.inline.} = getSpritePictureImpl(sprite).int
+proc getPicture*(sprite: Sprite): int {.inline.} = getPictureImpl(sprite).int
+proc getX*(sprite: Sprite): int {.inline.} = getXImpl(sprite).int
+proc getY*(sprite: Sprite): int {.inline.} = getYImpl(sprite).int
 proc getAvailableSprite*(): int {.inline.} = getAvailableSpriteImpl().int
 proc enableCollision*(sprite: Sprite; enable: bool) {.inline.} = (if not enableCollisionImpl(sprite, enable): raise e)
 proc getCollision*(sprite: Sprite): bool {.tln, importc: "TLN_GetSpriteCollision".}
