@@ -10,7 +10,7 @@ elif defined(MacOSX):
 {.pragma: tln, dynlib:libname, cdecl.}
 
 const
-  TilengineVersion* = (2, 13, 2)
+  TilengineVersion* = (2, 14, 0)
     ## The version of Tilengine these bindings were made for `(major, minor, patch)`.
     ## 
     ## Use `getVersion` to get the actual version of the shared lib for comparison.
@@ -543,6 +543,10 @@ proc setBlendModeImpl(layer: Layer; mode: Blend; factor: uint8): bool {.tln, imp
 proc setColumnOffsetImpl(layer: Layer; offset: ptr UncheckedArray[int32]): bool {.tln, importc: "TLN_SetLayerColumnOffset".}
 proc setClipImpl(layer: Layer; x1, y1, x2, y2: int32): bool {.tln, importc: "TLN_SetLayerClip".}
 proc disableClipImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayerClip".}
+proc setWindowImpl(layer: Layer; x1, y1, x2, y2: int32; invert: bool): bool {.tln, importc: "TLN_SetLayerWindow".}
+proc disableWindowImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayerWindow".}
+proc setWindowColorImpl(layer: Layer; r, g, b: uint8; blend: Blend): bool {.tln, importc: "TLN_SetLayerWindowColor".}
+proc disableWindowColorImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayerWindowColor".}
 proc setMosaicImpl(layer: Layer; width, height: int32): bool {.tln, importc: "TLN_SetLayerMosaic".}
 proc disableMosaicImpl(layer: Layer): bool {.tln, importc: "TLN_DisableLayerMosaic".}
 proc resetLayerModeImpl(layer: Layer): bool {.tln, importc: "TLN_ResetLayerMode".}
@@ -570,8 +574,12 @@ proc setPixelMapping*(layer: Layer; table: ptr UncheckedArray[PixelMap]) {.inlin
 proc disablePixelMapping*(layer: Layer) {.inline.} = setPixelMapping(layer, nil)
 proc setBlendMode*(layer: Layer; mode: Blend; factor: uint8) {.inline.} = (if not setBlendModeImpl(layer, mode, factor): raise e)
 proc setColumnOffset*(layer: Layer; offset: ptr UncheckedArray[int32]) {.inline.} = (if not setColumnOffsetImpl(layer, offset): raise e)
-proc setClip*(layer: Layer; x1, y1, x2, y2: int) {.inline.} = (if not setClipImpl(layer, cast[int32](x1), cast[int32](y1), cast[int32](x2), cast[int32](y2)): raise e)
-proc disableClip*(layer: Layer) {.inline.} = (if not disableClipImpl(layer): raise e)
+proc setClip*(layer: Layer; x1, y1, x2, y2: int) {.inline, deprecated: "Use setWindow instead.".} = (if not setClipImpl(layer, cast[int32](x1), cast[int32](y1), cast[int32](x2), cast[int32](y2)): raise e)
+proc disableClip*(layer: Layer) {.inline, deprecated: "Use disableWindow instead.".} = (if not disableClipImpl(layer): raise e)
+proc setWindow*(layer: Layer; x1, y1, x2, y2: int; invert = false) {.inline.} = (if not setWindowImpl(layer, cast[int32](x1), cast[int32](y1), cast[int32](x2), cast[int32](y2), invert): raise e)
+proc disableWindow*(layer: Layer) {.inline.} = (if not disableWindowImpl(layer): raise e)
+proc setWindowColor*(layer: Layer; r, g, b: uint8; blend: Blend) {.inline.} = (if not setWindowColorImpl(layer, r, g, b, blend): raise e)
+proc disableWindowColor*(layer: Layer) {.inline.} = (if not disableWindowColorImpl(layer): raise e)
 proc setMosaic*(layer: Layer; width, height: int) {.inline.} = (if not setMosaicImpl(layer, cast[int32](width), cast[int32](height)): raise e)
 proc disableMosaic*(layer: Layer) {.inline.} = (if not disableMosaicImpl(layer): raise e)
 proc resetLayerMode*(layer: Layer) {.inline.} = (if not resetLayerModeImpl(layer): raise e)
