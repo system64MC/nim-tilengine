@@ -1,6 +1,7 @@
 # nim-tilengine
 
 Nim bindings for [Tilengine](https://www.tilengine.org/) - a free, cross-platform 2D graphics engine for creating classic/retro games with tile maps, sprites and palettes.
+This is a fork of Exelotl's bindings. You can find thoses here : https://git.sr.ht/~exelotl/nim-tilengine
 
 
 ## Documentation
