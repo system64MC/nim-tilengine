@@ -1,7 +1,7 @@
 # Package
 
 version       = "2.14.0.0"
-author        = "Jeremy Clarke"
+author        = "Jeremy Clarke, fork by System64_MC"
 description   = "2D graphics engine for creating retro games"
 license       = "0BSD"
 srcDir        = "src"

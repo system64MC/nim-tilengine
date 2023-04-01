@@ -1,4 +1,4 @@
-import tilengine
+import tilengine/tilengine
 
 # Initialise the engine
 let engine = init(400, 240, numLayers = 1, numSprites = 0, numAnimations = 0)
