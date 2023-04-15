@@ -107,22 +107,31 @@ proc drawCircleFill*(bitmap: Bitmap, centerX: int, centerY: int, radius: int, st
         inc x
         m += 8 * x + 4
 
-
 proc drawLine*(bitmap: Bitmap, x: int, y: int, x2: int, y2: int, thickness: int = 0, color: uint8 = 1): void =
     var
-        dy = y2 - y
-        dx = x2 - x
-        err = 2 * dy - dx
-        myY = y
+        x = x
+        y = y
+        dx = abs(x2 - x)
+        dy = abs(y2 - y)
+        sx = if x < x2: 1 else: -1
+        sy = if y < y2: 1 else: -1
+        err = dx - dy
 
-    for myX in x..x2:
+    while x != x2 or y != y2:
+        if(x > bitmap.getWidth() - 2 or y > bitmap.getHeight() - 2): break
         if(thickness < 1):
-            bitmap.getData(myX, myY)[0] = color
+                bitmap.getData(x, y)[0] = color
         else:
-            bitmap.drawCircleFill(myX, myY, thickness, color = color)
+            bitmap.drawCircleFill(x, y, thickness, color = color)
+        var e2 = err shl 1
+        if e2 > -dy:
+            err -= dy
+            x += sx
+        if e2 < dx:
+            err += dx
+            y += sy
 
-        if err >= 0:
-            myY += 1
-            err -= 2 * dx
-        
-        err += 2 * dy
+    if(thickness < 1):
+            bitmap.getData(x, y)[0] = color
+    else:
+        bitmap.drawCircleFill(x, y, thickness, color = color)
