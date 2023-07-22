@@ -224,12 +224,14 @@ type
     cwfFullscreen  ## Create a fullscreen window
     cwfVsync       ## Sync frame updates with vertical retrace
     cwfNearest     ## Unfiltered upscaling
+    cwfNoVsync     ## Disables Vsync
 
 func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
   (cwfFullscreen in flags).uint32 shl 0 or
   (cwfVsync in flags).uint32 shl 1 or
   scale.uint32 shl 2 or
-  (cwfNearest in flags).uint32 shl 6
+  (cwfNearest in flags).uint32 shl 6 or
+  (cwfNoVsync in flags).uint32 shl 7
 
 type
   ErrorKind* {.size: 4.} = enum
@@ -284,6 +286,8 @@ template e: ref TilengineError =
 proc initImpl(hres, vres, numLayers, numSprites, numAnimations: int32): Engine {.tln, importc: "TLN_Init".}
 proc deleteContextImpl(context: Engine): bool {.tln, importc: "TLN_DeleteContext".}
 proc setContextImpl(context: Engine): bool {.tln, importc: "TLN_SetContext".}
+proc setTargetFpsImpl(fps: int32): void {.tln, importc: "TLN_SetTargetFps".}
+proc getTargetFpsImpl(): int32 {.tln, importc: "TLN_GetTargetFps".}
 proc getWidthImpl(): int32 {.tln, importc: "TLN_GetWidth".}
 proc getHeightImpl(): int32 {.tln, importc: "TLN_GetHeight".}
 proc getNumObjectsImpl(): uint32 {.tln, importc: "TLN_GetNumObjects".}
@@ -305,6 +309,8 @@ proc deinit*() {.tln, importc: "TLN_Deinit".}
 proc deleteContext*(context: Engine) {.inline.} = (if not deleteContextImpl(context): raise e)
 proc setContext*(context: Engine) {.inline.} = (if not setContextImpl(context): raise e)
 proc getContext*(): Engine {.tln, importc: "TLN_GetContext".}
+proc setTargetFps*(fps: int) = setTargetFpsImpl(fps.int32)
+proc getTargetFps*(): int = getTargetFpsImpl().int
 proc getWidth*(): int {.inline.} = getWidthImpl().int
 proc getHeight*(): int {.inline.} = getHeightImpl().int
 proc getNumObjects*(): int {.inline.} = getNumObjectsImpl().int
