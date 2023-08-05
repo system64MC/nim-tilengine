@@ -265,6 +265,14 @@ type
   TilengineError* = object of CatchableError
     kind*: ErrorKind
 
+import std/times
+var lastFrame = cpuTime()
+var currFrame = cpuTime()
+var deltaTimeVar = 0.0
+
+proc deltaTime*(): float64 =
+  return deltaTimeVar
+
 # ERRORS
 # ------
 
@@ -335,6 +343,12 @@ proc setLogLevel*(logLevel: LogLevel) {.tln, importc: "TLN_SetLogLevel".}
 proc openResourcePack*(filename, key: cstring) {.inline.} = (if not openResourcePackImpl(filename, key): raise e)
 proc closeResourcePack*() {.tln, importc: "TLN_CloseResourcePack".}
 
+func `targetFps=`*(fps: int) {.inline.} = setTargetFpsImpl(fps.int32)
+func `targetFps`*(): int {.inline.} = getTargetFpsImpl().int
+
+func `context=`*(context: Engine) {.inline.} = (if not setContextImpl(context): raise e)
+func `context`*(): Engine {.inline.} = getContext()
+
 # WINDOWING
 # ---------
 # Built-in window and input management
@@ -350,12 +364,23 @@ proc delayImpl(msecs: uint32) {.tln, importc: "TLN_Delay".}
 proc getTicksImpl(): uint32 {.tln, importc: "TLN_GetTicks".}
 proc getWindowWidthImpl(): int32 {.tln, importc: "TLN_GetWindowWidth".}
 proc getWindowHeightImpl(): int32 {.tln, importc: "TLN_GetWindowHeight".}
+proc processWindowImpl(): bool {.tln, importc: "TLN_ProcessWindow".}
+proc isWindowActiveImpl(): bool {.tln, importc: "TLN_IsWindowActive".}
 
 proc createWindow*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowImpl(overlay, cwf(scale, flags)): raise e)
 proc createWindowThread*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowThreadImpl(overlay, cwf(scale, flags)): raise e)
 proc setWindowTitle*(title: cstring) {.tln, importc: "TLN_SetWindowTitle".}
-proc processWindow*(): bool {.tln, importc: "TLN_ProcessWindow".}
-proc isWindowActive*(): bool {.tln, importc: "TLN_IsWindowActive".}
+
+proc processWindow*(): bool =
+  let res = processWindowImpl()
+  deltaTimeVar = cpuTime() - lastFrame
+  return res
+
+proc isWindowActive*(): bool =
+  let res = isWindowActiveImpl()
+  deltaTimeVar = cpuTime() - lastFrame
+  return res
+
 proc getInput*(input: Input): bool {.inline.} = getInputImpl(input.uint32)
 proc getInput*(player: Player; input: Input): bool {.inline.} = getInputImpl((player.uint32 shl 5) or (input.uint32))
 proc enableInput*(player: Player; enable: bool) {.tln, importc: "TLN_EnableInput".}
