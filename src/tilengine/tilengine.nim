@@ -771,6 +771,15 @@ proc getObject*(list: ObjectList; info: ptr ObjectInfo): bool {.tln, importc: "T
 proc getObject*(list: ObjectList): (ObjectInfo, bool) {.inline.} = result[1] = getObject(list, result[0])
 proc delete*(list: ObjectList) {.inline.} = (if not deleteImpl(list): raise e)
 
+proc getObjectImpl(list: ObjectList; info: ptr ObjectInfo): bool {.dynlib:libname, cdecl, importc: "TLN_GetListObject".}
+
+iterator items*(list: ObjectList): ObjectInfo =
+  var info: ObjectInfo
+  if getObjectImpl(list, addr info):  # pointer begins iteration
+    yield info
+    while getObjectImpl(list, nil):   # nil continues iteration
+      yield info
+
 # LAYER
 # -----
 # Background layers management
