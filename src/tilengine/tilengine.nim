@@ -51,6 +51,9 @@ type
     index*: uint16
     flags*: uint16
 
+  Color* = object
+    r*, g*, b*, a: byte
+
 {.push inline.}
 
 func palette*(t: Tile): int = ((t.flags and 0x00e0) shr 5).int
@@ -269,9 +272,7 @@ import std/times
 var lastFrame = cpuTime()
 var currFrame = cpuTime()
 var deltaTimeVar = 0.0
-
-proc deltaTime*(): float64 =
-  return deltaTimeVar
+template deltaTime*: float64 = deltaTimeVar
 
 # ERRORS
 # ------
@@ -344,7 +345,7 @@ proc openResourcePack*(filename, key: cstring) {.inline.} = (if not openResource
 proc closeResourcePack*() {.tln, importc: "TLN_CloseResourcePack".}
 
 func `targetFps=`*(fps: int) {.inline.} = setTargetFpsImpl(fps.int32)
-func `targetFps`*(): int {.inline.} = getTargetFpsImpl().int
+template targetFps*: int = getTargetFpsImpl().int
 
 func `context=`*(context: Engine) {.inline.} = (if not setContextImpl(context): raise e)
 func `context`*(): Engine {.inline.} = getContext()
@@ -373,12 +374,20 @@ proc setWindowTitle*(title: cstring) {.tln, importc: "TLN_SetWindowTitle".}
 
 proc processWindow*(): bool =
   let res = processWindowImpl()
-  deltaTimeVar = cpuTime() - lastFrame
+  let newTime = cpuTime()
+  deltaTimeVar = newTime - lastFrame
+  lastFrame = newTime
+  # let r = 1 / getTargetFpsImpl().float
+  # if(deltaTimeVar > r): deltaTime = r
   return res
 
 proc isWindowActive*(): bool =
   let res = isWindowActiveImpl()
-  deltaTimeVar = cpuTime() - lastFrame
+  let newTime = cpuTime()
+  deltaTimeVar = newTime - lastFrame
+  lastFrame = newTime
+  # let r = 1 / getTargetFpsImpl().float
+  # if(deltaTimeVar > r): deltaTime = r
   return res
 
 proc getInput*(input: Input): bool {.inline.} = getInputImpl(input.uint32)
@@ -483,6 +492,14 @@ proc getTiles*(tilemap: Tilemap; row = 0, col = 0): ptr UncheckedArray[Tile] = (
 
 proc delete*(tilemap: Tilemap) {.inline.} = (if not deleteImpl(tilemap): raise e)
 
+proc `[]=`*(tilemap: Tilemap; x: int, y: int, tile: Tile) {.inline.} = 
+  if(x < 0 or x > tilemap.getCols or y < 0 or y > tilemap.getRows): return
+  tilemap.setTile(y, x, tile)
+
+proc `[]`*(tilemap: Tilemap; x: int, y: int): Tile {.inline.} = 
+  if(x < 0 or x > tilemap.getCols or y < 0 or y > tilemap.getRows): raise e
+  return tilemap.getTile(y, x)
+
 # PALETTE
 # -------
 # Color palette resources management for sprites and background layers
@@ -497,6 +514,7 @@ proc subColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.t
 proc modColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.tln, importc: "TLN_ModPaletteColor".}
 proc getDataImpl(palette: Palette; index: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetPaletteData".}
 proc deleteImpl(palette: Palette): bool {.tln, importc: "TLN_DeletePalette".}
+proc getNumColorsImpl(palette: Palette): int32 {.tln, importc: "TLN_TLN_GetPaletteNumColors".}
 
 proc createPalette*(entries: int): Palette {.inline.} = (result = createPaletteImpl(cast[int32](entries)); if result == nil: raise e)
 proc loadPalette*(filename: cstring): Palette {.inline.} = (result = loadPaletteImpl(filename); if result == nil: raise e)
@@ -508,6 +526,194 @@ proc subColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} =
 proc modColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} = (if not modColorImpl(palette, r, g, b, start, num): raise e)
 proc getData*(palette: Palette; index: int): ptr UncheckedArray[uint8] {.inline.} = getDataImpl(palette, cast[int32](index))
 proc delete*(palette: Palette) {.inline.} = (if not deleteImpl(palette): raise e)
+proc getLength*(palette: Palette): int {.inline.} = (result = getNumColorsImpl(palette).int)
+
+proc `[]=`*(palette: Palette; idx: int, color: Color) {.inline.} = 
+  palette.setColor(idx, color.r, color.g, color.b)
+
+# TODO : to check, might be buggy
+proc `[]`*(palette: Palette; idx: int): Color {.inline.} = 
+  let arr = palette.getData(idx)
+  return Color(r: arr[0], g: arr[1], b: arr[2])
+
+proc `+`*(color1: Color, color2: Color): Color {.inline.} =
+  return Color(
+  r: min(color1.r.uint16 + color2.r.uint16, 255).uint8,
+  g: min(color1.g.uint16 + color2.g.uint16, 255).uint8,
+  b: min(color1.b.uint16 + color2.b.uint16, 255).uint8,
+  )
+
+proc `-`*(color1: Color, color2: Color): Color {.inline.} =
+  return Color(
+  r: max(color1.r.int16 - color2.r.int16, 0).uint8,
+  g: max(color1.g.int16 - color2.g.int16, 0).uint8,
+  b: max(color1.b.int16 - color2.b.int16, 0).uint8,
+  )
+
+proc `mod`*(color1: Color, color2: Color): Color {.inline.} =
+  return Color(
+  r: min((color1.r.uint16 * color2.r.uint16) div 255, 255).uint8,
+  g: min((color1.g.uint16 * color2.g.uint16) div 255, 255).uint8,
+  b: min((color1.b.uint16 * color2.b.uint16) div 255, 255).uint8,
+  )
+
+proc `+=`*(color1: var Color, color2: Color) {.inline.} =
+  color1.r = min(color1.r.uint16 + color2.r.uint16, 255).uint8
+  color1.g = min(color1.g.uint16 + color2.g.uint16, 255).uint8
+  color1.b = min(color1.b.uint16 + color2.b.uint16, 255).uint8
+
+proc `-=`*(color1: var Color, color2: Color) {.inline.} =
+  color1.r = max(color1.r.int16 - color2.r.int16, 0).uint8
+  color1.g = max(color1.g.int16 - color2.g.int16, 0).uint8
+  color1.b = max(color1.b.int16 - color2.b.int16, 0).uint8
+
+proc `%=`*(color1: var Color, color2: Color) {.inline.} =
+  color1.r = min((color1.r.uint16 * color2.r.uint16) div 255, 255).uint8
+  color1.g = min((color1.g.uint16 * color2.g.uint16) div 255, 255).uint8
+  color1.b = min((color1.b.uint16 * color2.b.uint16) div 255, 255).uint8
+
+proc `+`*(palette: Palette, color: Color): Palette {.inline.} =
+  var pal2 = palette.clone
+  pal2.addColor(color.r, color.g, color.b, 0, palette.getLength().byte)
+  return pal2
+
+proc `-`*(palette: Palette, color: Color): Palette {.inline.} =
+  var pal2 = palette.clone
+  pal2.subColor(color.r, color.g, color.b, 0, palette.getLength().byte)
+  return pal2
+
+proc `mod`*(palette: Palette, color: Color): Palette {.inline.} =
+  var pal2 = palette.clone
+  pal2.modColor(color.r, color.g, color.b, 0, palette.getLength().byte)
+  return pal2
+
+proc `+=`*(palette: Palette, color: Color) {.inline.} =
+  palette.addColor(color.r, color.g, color.b, 0, palette.getLength().byte)
+
+proc `-=`*(palette: Palette, color: Color) {.inline.} =
+  palette.subColor(color.r, color.g, color.b, 0, palette.getLength().byte)
+
+proc `%=`*(palette: Palette, color: Color) {.inline.} =
+  palette.modColor(color.r, color.g, color.b, 0, palette.getLength().byte)
+
+
+
+proc `+`*(palette: Palette, palette2: Palette): Palette {.inline.} =
+  var pal2 = palette.clone
+  let len1 = palette.getLength
+  let len2 = palette2.getLength
+  for i in 0..<len1:
+    var color1 = palette[i]
+    var color2 = if(i < len2): palette2[i] else: Color()
+    pal2[i] = color1 + color2
+  return pal2
+
+proc `-`*(palette: Palette, palette2: Palette): Palette {.inline.} =
+  var pal2 = palette.clone
+  let len1 = palette.getLength
+  let len2 = palette2.getLength
+  for i in 0..<len1:
+    var color1 = palette[i]
+    var color2 = if(i < len2): palette2[i] else: Color()
+    pal2[i] = color1 - color2
+  return pal2
+
+proc `mod`*(palette: Palette, palette2: Palette): Palette {.inline.} =
+  var pal2 = palette.clone
+  let len1 = palette.getLength
+  let len2 = palette2.getLength
+  for i in 0..<len1:
+    var color1 = palette[i]
+    var color2 = if(i < len2): palette2[i] else: Color()
+    pal2[i] = color1 mod color2
+  return pal2
+
+proc `+=`*(palette: Palette, palette2: Palette) {.inline.} =
+  let len1 = palette.getLength
+  let len2 = palette2.getLength
+  for i in 0..<len1:
+    var color1 = palette[i]
+    var color2 = if(i < len2): palette2[i] else: Color()
+    palette[i] = color1 + color2
+
+proc `-=`*(palette: Palette, palette2: Palette) {.inline.} =
+  let len1 = palette.getLength
+  let len2 = palette2.getLength
+  for i in 0..<len1:
+    var color1 = palette[i]
+    var color2 = if(i < len2): palette2[i] else: Color()
+    palette[i] = color1 - color2
+
+proc `%=`*(palette: Palette, palette2: Palette) {.inline.} =
+  let len1 = palette.getLength
+  let len2 = palette2.getLength
+  for i in 0..<len1:
+    var color1 = palette[i]
+    var color2 = if(i < len2): palette2[i] else: Color()
+    palette[i] = color1 mod color2
+
+
+proc `&=`*(palette: var Palette, color: Color) {.inline.} =
+  if(palette.getLength() == 256): return
+  let pal2 = createPalette(palette.getLength() + 1)
+  
+  for i in 0..<palette.getLength():
+    let cols = palette.getData(i)
+    pal2.setColor(i, cols[0], cols[1], cols[2])
+
+  pal2.setColor(palette.getLength, color.r, color.g, color.b)
+  palette.delete
+  palette = pal2
+
+proc add*(palette: var Palette, color: Color) {.inline.} =
+  if(palette.getLength() == 256): return
+  let pal2 = createPalette(palette.getLength() + 1)
+  
+  for i in 0..<palette.getLength():
+    let cols = palette.getData(i)
+    pal2.setColor(i, cols[0], cols[1], cols[2])
+
+  pal2.setColor(palette.getLength, color.r, color.g, color.b)
+  palette.delete
+  palette = pal2
+
+proc `&`*(palette: Palette, color: Color): Palette {.inline.} =
+  if(palette.getLength() == 256): return palette.clone()
+  let pal2 = createPalette(palette.getLength() + 1)
+  
+  for i in 0..<palette.getLength():
+    let cols = palette.getData(i)
+    pal2.setColor(i, cols[0], cols[1], cols[2])
+
+  pal2.setColor(palette.getLength, color.r, color.g, color.b)
+  return pal2
+
+proc resize(palette: var Palette, length: SomeUnsignedInt) =
+
+  let pal2 = createPalette(length)
+  
+  for i in 0..<length:
+    if(i < palette.getLength()):
+      let cols = palette.getData(i)
+      pal2.setColor(i, cols[0], cols[1], cols[2])
+    else:
+      pal2.setColor(i, 0, 0, 0)
+
+  palette.delete
+  palette = pal2
+
+
+proc `&`*(palette: Palette, palette2: Palette): Palette {.inline.} =
+  if(palette.getLength() == 256): return palette.clone()
+  let pal2 = createPalette(palette.getLength() + 1)
+  
+  for i in 0..<palette.getLength():
+    let cols = palette.getData(i)
+    pal2.setColor(i, cols[0], cols[1], cols[2])
+
+  pal2.setColor(palette.getLength, color.r, color.g, color.b)
+  return pal2
+
 
 # BITMAP
 # ------
@@ -536,6 +742,14 @@ proc getPalette*(bitmap: Bitmap): Palette {.tln, importc: "TLN_GetBitmapPalette"
 proc setPalette*(bitmap: Bitmap; palette: Palette) {.inline.} = (if not setPaletteImpl(bitmap, palette): raise e)
 proc delete*(bitmap: Bitmap) {.inline.} = (if not deleteImpl(bitmap): raise e)
 
+proc `[]=`*(bitmap: Bitmap; x: int, y: int, color: byte) {.inline.} = 
+  if(x < 0 or x > bitmap.getWidth or y < 0 or y > bitmap.getHeight): return
+  getDataImpl(bitmap, cast[int32](x), cast[int32](y))[0] = color
+
+proc `[]`*(bitmap: Bitmap; x: int, y: int): byte {.inline.} = 
+  if(x < 0 or x > bitmap.getWidth or y < 0 or y > bitmap.getHeight): raise e
+  return getDataImpl(bitmap, cast[int32](x), cast[int32](y))[0]
+
 # OBJECTS
 # -------
 # ObjectList resources management
@@ -553,6 +767,7 @@ proc clone*(src: ObjectList): ObjectList {.inline.} = (result = cloneImpl(src); 
 proc addTileObject*(list: ObjectList; id, gid, flags: uint16; x, y: int) {.inline.} = (if not addTileObjectImpl(list, id, gid, flags, cast[int32](x), cast[int32](y)): raise e)
 proc getNumObjects*(list: ObjectList): int {.inline.} = getNumObjectsImpl(list).int
 proc getObject*(list: ObjectList; info: var ObjectInfo): bool {.tln, importc: "TLN_GetListObject".}
+proc getObject*(list: ObjectList; info: ptr ObjectInfo): bool {.tln, importc: "TLN_GetListObject".}
 proc getObject*(list: ObjectList): (ObjectInfo, bool) {.inline.} = result[1] = getObject(list, result[0])
 proc delete*(list: ObjectList) {.inline.} = (if not deleteImpl(list): raise e)
 

@@ -354,7 +354,6 @@ proc drawCharacter*(bitmap: Bitmap, position: Point, character: char, color: uin
     for j in 0..(FONT_HEIGHT - 1):
         for i in 0..(FONT_WIDTH - 1):
             if (FONT[j * (96 * FONT_WIDTH) + ((index * FONT_WIDTH) + i)] != 0):
-                echo "E"
                 bitmap.getData(position.x + i, position.y + j)[0] = color
             else:
                 if(not transparent):
@@ -670,7 +669,29 @@ proc copyBitmapSectionFromBitmapOld(destination: Bitmap, source: Bitmap, area: R
                     )
                     continue
 
-proc copyBitmapSectionFromBitmap2*(destination: Bitmap, source: Bitmap, area: Rectangle, destPoint: Point, warpAround: bool = false, flipX: bool = false, flipY: bool = false, transparent: bool = true, paletteOffset: uint8 = 0) =
+# proc copyBitmapSectionFromBitmap2*(destination: Bitmap, source: Bitmap, area: Rectangle, destPoint: Point, warpAround: bool = false, flipX: bool = false, flipY: bool = false, transparent: bool = true, paletteOffset: uint8 = 0) =
+#     let
+#         aWidth = area.width - 1
+#         aHeight = area.height - 1
+#         destWidth = destination.getWidth()
+#         destHeight = destination.getHeight()
+
+#     for i in 0..aWidth:
+#         for j in 0..aHeight:
+#             var colorIndex = source.getBitmapPixelWarpAround(Point(x: i + area.position.x, y: j + area.position.y))
+#             if colorIndex == 0 and transparent: continue
+#             colorIndex = if colorIndex == 0: 0 else: colorIndex + paletteOffset
+#             var (destX, destY) = (i + destPoint.x, j + destPoint.y)
+#             if flipY: destX = aWidth - i + destPoint.x
+#             if flipX: destY = aHeight - j + destPoint.y
+#             if destX >= 0 and destX < destWidth and destY >= 0 and destY < destHeight:
+#                 destination.getData(destX, destY)[0] = colorIndex
+#             elif warpAround:
+#                 destination.putBitmapPixelWarpAround(Point(x: destX, y: destY), colorIndex)
+
+proc copyBitmapSectionFromBitmap2*(destination: Bitmap, source: Bitmap, area: Rectangle, destPoint: Point,
+                                   scaleX: float, scaleY: float, warpAround: bool = false, flipX: bool = false,
+                                   flipY: bool = false, transparent: bool = true, paletteOffset: uint8 = 0) =
     let
         aWidth = area.width - 1
         aHeight = area.height - 1
@@ -679,16 +700,32 @@ proc copyBitmapSectionFromBitmap2*(destination: Bitmap, source: Bitmap, area: Re
 
     for i in 0..aWidth:
         for j in 0..aHeight:
-            var colorIndex = source.getBitmapPixelWarpAround(Point(x: i + area.position.x, y: j + area.position.y))
+            # Calculate scaled source coordinates
+            var (srcX, srcY) = (int(i.float * scaleX) + area.position.x, int(j.float * scaleY) + area.position.y)
+
+            # Apply flipping
+            if flipX: srcX = area.position.x + area.width - 1 - srcX
+            if flipY: srcY = area.position.y + area.height - 1 - srcY
+
+            # Get the color index from the source bitmap
+            var colorIndex = source.getBitmapPixelWarpAround(Point(x: srcX, y: srcY))
+
+            # Check for transparency
             if colorIndex == 0 and transparent: continue
+
+            # Apply palette offset
             colorIndex = if colorIndex == 0: 0 else: colorIndex + paletteOffset
-            var (destX, destY) = (i + destPoint.x, j + destPoint.y)
-            if flipY: destX = aWidth - i + destPoint.x
-            if flipX: destY = aHeight - j + destPoint.y
+
+            # Calculate scaled destination coordinates
+            var (destX, destY) = (int(i.float * scaleX) + destPoint.x, int(j.float * scaleY) + destPoint.y)
+
+            # Check if the destination is within the bounds of the destination bitmap
             if destX >= 0 and destX < destWidth and destY >= 0 and destY < destHeight:
                 destination.getData(destX, destY)[0] = colorIndex
             elif warpAround:
+                # If warpAround is enabled, put the pixel in the destination with wrap-around
                 destination.putBitmapPixelWarpAround(Point(x: destX, y: destY), colorIndex)
+
 
 
 proc flipBitmap*(bitmap: Bitmap, flipX, flipY: bool) =
