@@ -711,7 +711,7 @@ proc `&`*(palette: Palette, palette2: Palette): Palette {.inline.} =
     let cols = palette.getData(i)
     pal2.setColor(i, cols[0], cols[1], cols[2])
 
-  pal2.setColor(palette.getLength, color.r, color.g, color.b)
+  # pal2.setColor(palette.getLength, color.r, color.g, color.b)
   return pal2
 
 
