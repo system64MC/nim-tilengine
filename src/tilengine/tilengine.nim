@@ -1,13 +1,17 @@
 # Tilengine - The 2D retro graphics engine with raster effects
 
-when defined(Windows):
-  const libname* = "Tilengine.dll"
-elif defined(Linux):
-  const libname* = "libTilengine.so"
-elif defined(MacOSX):
-  const libname* = "Tilengine.dylib"
 
-{.pragma: tln, dynlib:libname, cdecl.}
+if not defined(emscripten):
+  when defined(Windows):
+    const libname* = "Tilengine.dll"
+  elif defined(Linux):
+    const libname* = "libTilengine.so"
+  elif defined(MacOSX):
+    const libname* = "Tilengine.dylib"
+  {.pragma: tln, dynlib:libname, cdecl.}
+else:
+  {.passl: "-ltilengine".}
+  {.pragma: tln, cdecl.}
 
 const
   TilengineVersion* = (2, 14, 0)
@@ -182,6 +186,7 @@ type
   BlendFunction* = proc (src, dst: uint8): uint8 {.cdecl.}
   # SDLCallback* = proc (a1: ptr SDL_Event) {.cdecl.}
   SDLCallback* = proc (a1: pointer) {.cdecl.}   # TODO (exe)
+  TaskCallback* = proc(frame: uint32) {.cdecl.}
 
 type
   ## Player index for input assignment functions
@@ -336,6 +341,7 @@ proc setGlobalPalette*(index: int; palette: Palette) {.inline.} = (if not setGlo
 proc getGlobalPalette*(index: int): Palette {.inline.} = (result = getGlobalPaletteImpl(cast[int32](index)); if result == nil: raise e)
 proc setRasterCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetRasterCallback".}
 proc setFrameCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetFrameCallback".}
+proc setMainTask*(task: TaskCallback) {.tln, importc: "TLN_SetMainTask".}
 proc setRenderTarget*(data: ptr UncheckedArray[uint8]; pitch: int) {.inline.} = setRenderTargetImpl(data, cast[int32](pitch))
 proc updateFrame*(frame: int) {.inline.} = updateFrameImpl(cast[int32](frame))
 proc setLoadPath*(path: cstring) {.tln, importc: "TLN_SetLoadPath".}
