@@ -1,7 +1,7 @@
 # Tilengine - The 2D retro graphics engine with raster effects
 
 
-if not defined(emscripten):
+when not defined(emscripten):
   when defined(Windows):
     const libname* = "Tilengine.dll"
   elif defined(Linux):
@@ -780,7 +780,7 @@ proc getObject*(list: ObjectList; info: ptr ObjectInfo): bool {.tln, importc: "T
 proc getObject*(list: ObjectList): (ObjectInfo, bool) {.inline.} = result[1] = getObject(list, result[0])
 proc delete*(list: ObjectList) {.inline.} = (if not deleteImpl(list): raise e)
 
-proc getObjectImpl(list: ObjectList; info: ptr ObjectInfo): bool {.dynlib:libname, cdecl, importc: "TLN_GetListObject".}
+proc getObjectImpl(list: ObjectList; info: ptr ObjectInfo): bool {.tln, cdecl, importc: "TLN_GetListObject".}
 
 iterator items*(list: ObjectList): ObjectInfo =
   var info: ObjectInfo
