@@ -186,7 +186,7 @@ type
   BlendFunction* = proc (src, dst: uint8): uint8 {.cdecl.}
   # SDLCallback* = proc (a1: ptr SDL_Event) {.cdecl.}
   SDLCallback* = proc (a1: pointer) {.cdecl.}   # TODO (exe)
-  TaskCallback* = proc(frame: uint32) {.cdecl.}
+  
 
 type
   ## Player index for input assignment functions
@@ -997,13 +997,18 @@ proc setWorldPosition*(x, y: int) {.inline.} = setWorldPositionImpl(cast[int32](
 proc setWorldPosition*(sprite: Sprite; x, y: int) {.inline.} = (if not setWorldPositionImpl(sprite, cast[int32](x), cast[int32](y)): raise e)
 proc releaseWorld*() {.tln, importc: "TLN_ReleaseWorld".}
 
+type
+  TaskCallback* = proc()
+
+var taskCallback: TaskCallback
 when defined(emscripten):
   proc emscripten_set_main_loop(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
   proc setMainTask*(gameLogic: proc(): void) =
+    taskCallback = gameLogic
     proc task() {.cdecl.} =
 
       let start = getTicks().float
-      gameLogic()
+      taskCallback()
       drawFrame(0)
       let fps = getTargetFps().float
       let mend = getTicks().float
