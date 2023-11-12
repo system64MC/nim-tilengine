@@ -998,7 +998,7 @@ proc setWorldPosition*(sprite: Sprite; x, y: int) {.inline.} = (if not setWorldP
 proc releaseWorld*() {.tln, importc: "TLN_ReleaseWorld".}
 
 when defined(emscripten):
-  proc emscripten_set_main_loop*(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
+  proc emscripten_set_main_loop(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
   proc setMainTask*(gameLogic: proc(): void) =
     proc task() {.cdecl.} =
 
