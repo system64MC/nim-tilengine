@@ -341,7 +341,7 @@ proc setGlobalPalette*(index: int; palette: Palette) {.inline.} = (if not setGlo
 proc getGlobalPalette*(index: int): Palette {.inline.} = (result = getGlobalPaletteImpl(cast[int32](index)); if result == nil: raise e)
 proc setRasterCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetRasterCallback".}
 proc setFrameCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetFrameCallback".}
-proc setMainTask*(task: TaskCallback) {.tln, importc: "TLN_SetMainTask".}
+# proc setMainTask*(task: TaskCallback) {.tln, importc: "TLN_SetMainTask".}
 proc setRenderTarget*(data: ptr UncheckedArray[uint8]; pitch: int) {.inline.} = setRenderTargetImpl(data, cast[int32](pitch))
 proc updateFrame*(frame: int) {.inline.} = updateFrameImpl(cast[int32](frame))
 proc setLoadPath*(path: cstring) {.tln, importc: "TLN_SetLoadPath".}
@@ -374,7 +374,10 @@ proc getWindowHeightImpl(): int32 {.tln, importc: "TLN_GetWindowHeight".}
 proc processWindowImpl(): bool {.tln, importc: "TLN_ProcessWindow".}
 proc isWindowActiveImpl(): bool {.tln, importc: "TLN_IsWindowActive".}
 
-proc createWindow*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowImpl(overlay, cwf(scale, flags)): raise e)
+var windowFlags: set[CreateWindowFlag] = {}
+proc createWindow*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = 
+  if not createWindowImpl(overlay, cwf(scale, flags)): raise e
+  windowFlags = flags
 proc createWindowThread*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowThreadImpl(overlay, cwf(scale, flags)): raise e)
 proc setWindowTitle*(title: cstring) {.tln, importc: "TLN_SetWindowTitle".}
 
@@ -993,3 +996,27 @@ proc loadWorld*(tmxfile: cstring; firstLayer: int) {.inline.} = (if not loadWorl
 proc setWorldPosition*(x, y: int) {.inline.} = setWorldPositionImpl(cast[int32](x), cast[int32](y))
 proc setWorldPosition*(sprite: Sprite; x, y: int) {.inline.} = (if not setWorldPositionImpl(sprite, cast[int32](x), cast[int32](y)): raise e)
 proc releaseWorld*() {.tln, importc: "TLN_ReleaseWorld".}
+
+when defined(emscripten):
+  proc emscripten_set_main_loop*(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
+  proc setMainTask(gameLogic: proc(): void) =
+    proc task() {.cdecl.} =
+
+      let start = getTicks().float
+      gameLogic()
+      drawFrame(0)
+      let fps = getTargetFps().float
+      let mend = getTicks().float
+      let delta = mend - start
+      if(windowFlags.contains(cwfNoVsync) and fps > 0):
+        let targetTime = 1000.0 / fps
+        if(delta < targetTime):
+          delay((targetTime - delta).uint32)
+        return
+      let targetTime = 1000.0 / 60
+      if(delta < targetTime):
+        delay((targetTime - delta).uint32)
+      return
+
+    emscripten_set_main_loop(task, 0, 1)
+    
