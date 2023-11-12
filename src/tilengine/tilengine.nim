@@ -999,7 +999,7 @@ proc releaseWorld*() {.tln, importc: "TLN_ReleaseWorld".}
 
 when defined(emscripten):
   proc emscripten_set_main_loop*(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
-  proc setMainTask(gameLogic: proc(): void) =
+  proc setMainTask*(gameLogic: proc(): void) =
     proc task() {.cdecl.} =
 
       let start = getTicks().float
