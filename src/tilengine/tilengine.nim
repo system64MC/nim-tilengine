@@ -1003,25 +1003,13 @@ type
 var taskCallback: TaskCallback
 when defined(emscripten):
   proc emscripten_set_main_loop(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
-  proc setMainTask*(gameLogic: proc(): void) =
+  proc setMainTask*(gameLogic: proc(): void, fps: int32) =
     taskCallback = gameLogic
     proc task() {.cdecl.} =
 
-      let start = getTicks().float
-      taskCallback()
-      drawFrame(0)
-      let fps = getTargetFps().float
-      let mend = getTicks().float
-      let delta = mend - start
-      if(windowFlags.contains(cwfNoVsync) and fps > 0):
-        let targetTime = 1000.0 / fps
-        if(delta < targetTime):
-          delay((targetTime - delta).uint32)
-        return
-      let targetTime = 1000.0 / 60
-      if(delta < targetTime):
-        delay((targetTime - delta).uint32)
-      return
+      if(processWindow and taskCallback != nil):
+        taskCallback()
+        drawFrame(0)
 
-    emscripten_set_main_loop(task, 0, 1)
+    emscripten_set_main_loop(task, fps, 1)
     
