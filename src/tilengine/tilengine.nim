@@ -1007,7 +1007,7 @@ when defined(emscripten):
     taskCallback = gameLogic
     proc task() {.cdecl.} =
 
-      if(processWindow and taskCallback != nil):
+      if(processWindow and (taskCallback != nil)):
         taskCallback()
         drawFrame(0)
 
