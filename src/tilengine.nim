@@ -14,7 +14,7 @@ else:
   {.pragma: tln, cdecl.}
 
 const
-  TilengineVersion* = (2, 14, 0)
+  TilengineVersion* = (2, 15, 2)
     ## The version of Tilengine these bindings were made for `(major, minor, patch)`.
     ## 
     ## Use `getVersion` to get the actual version of the shared lib for comparison.
