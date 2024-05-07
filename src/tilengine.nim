@@ -661,6 +661,7 @@ proc pauseAnimationImpl(sprite: Sprite): bool {.tln, importc: "TLN_PauseSpriteAn
 proc resumeAnimationImpl(sprite: Sprite): bool {.tln, importc: "TLN_ResumeSpriteAnimation".}
 proc disableImpl(sprite: Sprite): bool {.tln, importc: "TLN_DisableSprite".}
 proc getPaletteImpl(sprite: Sprite): Palette {.tln, importc: "TLN_GetSpritePalette".}
+proc enableSpriteMaskingImpl(sprite: Sprite, enable: bool): bool {.tln, importc: "TLN_EnableSpriteMasking".}
 
 proc configSprite*(sprite: Sprite; spriteset: Spriteset; flags: set[SpriteFlag]) {.inline.} = (if not configSpriteImpl(sprite, spriteset, spr(flags)): raise e)
 proc setSpriteSet*(sprite: Sprite; spriteset: Spriteset) {.inline.} = (if not setSpriteSetImpl(sprite, spriteset): raise e)
@@ -685,6 +686,7 @@ proc getCollision*(sprite: Sprite): bool {.tln, importc: "TLN_GetSpriteCollision
 proc getState*(sprite: Sprite): SpriteState {.inline.} = (if not getStateImpl(sprite, result): raise e)
 proc setFirstSprite*(sprite: Sprite) {.inline.} = (if not setFirstSpriteImpl(sprite): raise e)
 proc setNextSprite*(sprite, next: Sprite) {.inline.} = (if not setNextSpriteImpl(sprite, next): raise e)
+proc enableMasking*(sprite, enable) {.inline.} = (if not enableSpriteMaskingImpl(sprite, next): raise e)
 proc setSpritesMaskRegion*(topLine, bottomLine: int) {.inline.} = setSpritesMaskRegion(cast[int32](topLine), cast[int32](bottomLine))
 proc setAnimation*(sprite: Sprite; sequence: Sequence; loop: int) {.inline.} = (if not setAnimationImpl(sprite, sequence, cast[int32](loop)): raise e)
 proc disableAnimation*(sprite: Sprite) {.inline.} = (if not disableAnimationImpl(sprite): raise e)
