@@ -239,7 +239,7 @@ type
     cwfFullscreen  ## Create a fullscreen window
     cwfVsync       ## Sync frame updates with vertical retrace
     cwfNearest     ## Unfiltered upscaling
-    cwfNoVsync     ## Disables Vsync
+    cwfNoVsync     ## Disables Vsync  
 
 func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
   (cwfFullscreen in flags).uint32 shl 0 or
@@ -367,6 +367,8 @@ proc delayImpl(msecs: uint32) {.tln, importc: "TLN_Delay".}
 proc getTicksImpl(): uint32 {.tln, importc: "TLN_GetTicks".}
 proc getWindowWidthImpl(): int32 {.tln, importc: "TLN_GetWindowWidth".}
 proc getWindowHeightImpl(): int32 {.tln, importc: "TLN_GetWindowHeight".}
+proc getWindowScaleFactorImpl(): int32 {.tln, importc: "TLN_GetWindowScaleFactor".}
+proc setWindowScaleFactorImpl(scale: int32) {.tln, importc: "TLN_SetWindowScaleFactor".}
 
 proc createWindow*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowImpl(overlay, cwf(scale, flags)): raise e)
 proc createWindowThread*(overlay: cstring = nil; scale: range[0..5] = 0; flags: set[CreateWindowFlag] = {}) = (if not createWindowThreadImpl(overlay, cwf(scale, flags)): raise e)
@@ -391,6 +393,8 @@ proc delay*(msecs: Natural) {.inline.} = delayImpl(cast[uint32](msecs))
 proc getTicks*(): int {.inline.} = getTicksImpl().int
 proc getWindowWidth*(): int {.inline.} = getWindowWidthImpl().int
 proc getWindowHeight*(): int {.inline.} = getWindowHeightImpl().int
+proc setWindowScaleFactor*(scale: int) {.inline.} = setWindowScaleFactorImpl(scale.int32)
+proc getWindowScaleFactor*(): int {.inline.} = getWindowScaleFactorImpl().int32
 
 # SPRITESET
 # ---------
