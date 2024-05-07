@@ -20,6 +20,17 @@ const
     ## Use `getVersion` to get the actual version of the shared lib for comparison.
 
 type
+  TileFlags* {.size: 2} = enum
+    ## Tile flags
+    TileNone      = 0        ## No flags
+    TileFlipX     = 1 shl 15 ## Horizontal flip
+    TileFlipY     = 1 shl 14 ## Vertical flip
+    TileRotate    = 1 shl 13 ## Row/Column flip
+    TilePriority  = 1 shl 12 ## Tile goes in front of tile layer
+    TileMasked    = 1 shl 11 ## sprite won't be drawn inside masked region
+    TileTileset   = 7 shl 8  ## Tileset index (0 - 7)
+    TilePalette   = 7 shl 5  ## Palette index (0 - 7)
+
   Blend* {.size: 4.} = enum
     ## Layer blend modes. Must be one of these and are mutually exclusive:
     BlendNone       ## Blending disabled
