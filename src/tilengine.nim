@@ -45,6 +45,16 @@ type
 const
   BlendMix* = BlendMix50
 
+func tileFlags(flags: set[TileFlags]): uint16 =
+  (TileNone in flags).uint16 or
+  (TileFlipX in flags).uint16 or
+  (TileFlipY in flags).uint16 or
+  (TileRotate in flags).uint16 or
+  (TilePriority in flags).uint16 or
+  (TileMasked in flags).uint16 or
+  (TileTileset in flags).uint16 or
+  (TilePalette in flags).uint16 or
+
 type
   LayerType* {.size: 4.} = enum
     ## Layer type retrieved by `getLayerType`
