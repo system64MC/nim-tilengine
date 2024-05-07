@@ -1,13 +1,17 @@
 # Tilengine - The 2D retro graphics engine with raster effects
 
-when defined(Windows):
-  const libname* = "Tilengine.dll"
-elif defined(Linux):
-  const libname* = "libTilengine.so"
-elif defined(MacOSX):
-  const libname* = "Tilengine.dylib"
 
-{.pragma: tln, dynlib:libname, cdecl.}
+when not defined(emscripten):
+  when defined(Windows):
+    const libname* = "Tilengine.dll"
+  elif defined(Linux):
+    const libname* = "libTilengine.so"
+  elif defined(MacOSX):
+    const libname* = "Tilengine.dylib"
+  {.pragma: tln, dynlib:libname, cdecl.}
+else:
+  {.passl: "-ltilengine".}
+  {.pragma: tln, cdecl.}
 
 const
   TilengineVersion* = (2, 14, 0)
@@ -224,12 +228,14 @@ type
     cwfFullscreen  ## Create a fullscreen window
     cwfVsync       ## Sync frame updates with vertical retrace
     cwfNearest     ## Unfiltered upscaling
+    cwfNoVsync     ## Disables Vsync
 
 func cwf(scale: int; flags: set[CreateWindowFlag]): uint32 =
   (cwfFullscreen in flags).uint32 shl 0 or
   (cwfVsync in flags).uint32 shl 1 or
   scale.uint32 shl 2 or
-  (cwfNearest in flags).uint32 shl 6
+  (cwfNearest in flags).uint32 shl 6 or
+  (cwfNoVsync in flags).uint32 shl 7
 
 type
   ErrorKind* {.size: 4.} = enum
@@ -284,6 +290,8 @@ template e: ref TilengineError =
 proc initImpl(hres, vres, numLayers, numSprites, numAnimations: int32): Engine {.tln, importc: "TLN_Init".}
 proc deleteContextImpl(context: Engine): bool {.tln, importc: "TLN_DeleteContext".}
 proc setContextImpl(context: Engine): bool {.tln, importc: "TLN_SetContext".}
+proc setTargetFpsImpl(fps: int32): void {.tln, importc: "TLN_SetTargetFps".}
+proc getTargetFpsImpl(): int32 {.tln, importc: "TLN_GetTargetFps".}
 proc getWidthImpl(): int32 {.tln, importc: "TLN_GetWidth".}
 proc getHeightImpl(): int32 {.tln, importc: "TLN_GetHeight".}
 proc getNumObjectsImpl(): uint32 {.tln, importc: "TLN_GetNumObjects".}
@@ -305,6 +313,8 @@ proc deinit*() {.tln, importc: "TLN_Deinit".}
 proc deleteContext*(context: Engine) {.inline.} = (if not deleteContextImpl(context): raise e)
 proc setContext*(context: Engine) {.inline.} = (if not setContextImpl(context): raise e)
 proc getContext*(): Engine {.tln, importc: "TLN_GetContext".}
+proc setTargetFps*(fps: int) = setTargetFpsImpl(fps.int32)
+proc getTargetFps*(): int = getTargetFpsImpl().int
 proc getWidth*(): int {.inline.} = getWidthImpl().int
 proc getHeight*(): int {.inline.} = getHeightImpl().int
 proc getNumObjects*(): int {.inline.} = getNumObjectsImpl().int
@@ -321,6 +331,8 @@ proc setGlobalPalette*(index: int; palette: Palette) {.inline.} = (if not setGlo
 proc getGlobalPalette*(index: int): Palette {.inline.} = (result = getGlobalPaletteImpl(cast[int32](index)); if result == nil: raise e)
 proc setRasterCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetRasterCallback".}
 proc setFrameCallback*(a1: VideoCallback) {.tln, importc: "TLN_SetFrameCallback".}
+when defined(emscripten):
+  proc setMainTask*(task: TaskCallback) {.tln, importc: "TLN_SetMainTask".}
 proc setRenderTarget*(data: ptr UncheckedArray[uint8]; pitch: int) {.inline.} = setRenderTargetImpl(data, cast[int32](pitch))
 proc updateFrame*(frame: int) {.inline.} = updateFrameImpl(cast[int32](frame))
 proc setLoadPath*(path: cstring) {.tln, importc: "TLN_SetLoadPath".}
@@ -466,6 +478,7 @@ proc subColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.t
 proc modColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.tln, importc: "TLN_ModPaletteColor".}
 proc getDataImpl(palette: Palette; index: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetPaletteData".}
 proc deleteImpl(palette: Palette): bool {.tln, importc: "TLN_DeletePalette".}
+proc getNumColorsImpl(palette: Palette): int32 {.tln, importc: "TLN_TLN_GetPaletteNumColors".}
 
 proc createPalette*(entries: int): Palette {.inline.} = (result = createPaletteImpl(cast[int32](entries)); if result == nil: raise e)
 proc loadPalette*(filename: cstring): Palette {.inline.} = (result = loadPaletteImpl(filename); if result == nil: raise e)
@@ -477,6 +490,7 @@ proc subColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} =
 proc modColor*(palette: Palette; r, g, b: uint8; start, num: uint8) {.inline.} = (if not modColorImpl(palette, r, g, b, start, num): raise e)
 proc getData*(palette: Palette; index: int): ptr UncheckedArray[uint8] {.inline.} = getDataImpl(palette, cast[int32](index))
 proc delete*(palette: Palette) {.inline.} = (if not deleteImpl(palette): raise e)
+proc getNumColors*(palette: Palette): int {.inline.} = (result = getNumColorsImpl(palette).int)
 
 # BITMAP
 # ------
@@ -732,3 +746,19 @@ proc loadWorld*(tmxfile: cstring; firstLayer: int) {.inline.} = (if not loadWorl
 proc setWorldPosition*(x, y: int) {.inline.} = setWorldPositionImpl(cast[int32](x), cast[int32](y))
 proc setWorldPosition*(sprite: Sprite; x, y: int) {.inline.} = (if not setWorldPositionImpl(sprite, cast[int32](x), cast[int32](y)): raise e)
 proc releaseWorld*() {.tln, importc: "TLN_ReleaseWorld".}
+
+when defined(emscripten):
+  type
+    TaskCallback* = proc()
+  var taskCallback: TaskCallback
+  proc emscripten_set_main_loop(f: proc() {.cdecl.}, a: cint, b: int32) {.importc.}
+  proc setMainTask*(gameLogic: proc(): void, fps: int32) =
+    taskCallback = gameLogic
+    proc task() {.cdecl.} =
+
+      if(processWindow() and (taskCallback != nil)):
+        taskCallback()
+        drawFrame(0)
+
+    emscripten_set_main_loop(task, fps, 1)
+    
