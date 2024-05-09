@@ -1,5 +1,8 @@
 # Tilengine - The 2D retro graphics engine with raster effects
-
+when defined(tlnUseVladarSdl2):
+  import sdl2_nim
+elif defined(tlnUseNimlangSdl2):
+  import sdl2
 
 when not defined(emscripten):
   when defined(Windows):
@@ -23,13 +26,13 @@ type
   TileFlags* {.size: 2} = enum
     ## Tile flags
     TileNone      = 0        ## No flags
-    TileFlipX     = 1 shl 15 ## Horizontal flip
-    TileFlipY     = 1 shl 14 ## Vertical flip
-    TileRotate    = 1 shl 13 ## Row/Column flip
-    TilePriority  = 1 shl 12 ## Tile goes in front of tile layer
-    TileMasked    = 1 shl 11 ## sprite won't be drawn inside masked region
-    TileTileset   = 7 shl 8  ## Tileset index (0 - 7)
     TilePalette   = 7 shl 5  ## Palette index (0 - 7)
+    TileTileset   = 7 shl 8  ## Tileset index (0 - 7)
+    TileMasked    = 1 shl 11 ## sprite won't be drawn inside masked region
+    TilePriority  = 1 shl 12 ## Tile goes in front of tile layer
+    TileRotate    = 1 shl 13 ## Row/Column flip
+    TileFlipY     = 1 shl 14 ## Vertical flip
+    TileFlipX     = 1 shl 15 ## Horizontal flip
 
   Blend* {.size: 4.} = enum
     ## Layer blend modes. Must be one of these and are mutually exclusive:
@@ -53,7 +56,7 @@ func tileFlags(flags: set[TileFlags]): uint16 =
   (TilePriority in flags).uint16 or
   (TileMasked in flags).uint16 or
   (TileTileset in flags).uint16 or
-  (TilePalette in flags).uint16 or
+  (TilePalette in flags).uint16
 
 type
   LayerType* {.size: 4.} = enum
@@ -203,7 +206,14 @@ type
   VideoCallback* = proc (scanline: int32) {.cdecl.}
   BlendFunction* = proc (src, dst: uint8): uint8 {.cdecl.}
   # SDLCallback* = proc (a1: ptr SDL_Event) {.cdecl.}
-  SDLCallback* = proc (a1: pointer) {.cdecl.}   # TODO (exe)
+  SDLCallback* = proc (a1: ptr) {.cdecl.}
+  
+
+# when defined(tlnUseVladarSdl2):
+#   type
+#     SDLCallback* = proc (a1: EventKind) {.cdecl.}   # TODO (exe)
+# elif defined(tlnUseNimlangSdl2):
+#   import sdl2
 
 type
   ## Player index for input assignment functions
@@ -696,7 +706,7 @@ proc getCollision*(sprite: Sprite): bool {.tln, importc: "TLN_GetSpriteCollision
 proc getState*(sprite: Sprite): SpriteState {.inline.} = (if not getStateImpl(sprite, result): raise e)
 proc setFirstSprite*(sprite: Sprite) {.inline.} = (if not setFirstSpriteImpl(sprite): raise e)
 proc setNextSprite*(sprite, next: Sprite) {.inline.} = (if not setNextSpriteImpl(sprite, next): raise e)
-proc enableMasking*(sprite, enable) {.inline.} = (if not enableSpriteMaskingImpl(sprite, next): raise e)
+proc enableMasking*(sprite: Sprite, enable: bool) {.inline.} = (if not enableSpriteMaskingImpl(sprite, enable): raise e)
 proc setSpritesMaskRegion*(topLine, bottomLine: int) {.inline.} = setSpritesMaskRegion(cast[int32](topLine), cast[int32](bottomLine))
 proc setAnimation*(sprite: Sprite; sequence: Sequence; loop: int) {.inline.} = (if not setAnimationImpl(sprite, sequence, cast[int32](loop)): raise e)
 proc disableAnimation*(sprite: Sprite) {.inline.} = (if not disableAnimationImpl(sprite): raise e)
