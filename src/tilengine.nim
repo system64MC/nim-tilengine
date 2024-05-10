@@ -337,7 +337,7 @@ proc setGlobalPaletteImpl(index: int32; palette: Palette): bool {.tln, importc: 
 proc setRenderTargetImpl(data: ptr UncheckedArray[uint8]; pitch: int32) {.tln, importc: "TLN_SetRenderTarget".}
 proc updateFrameImpl(frame: int32) {.tln, importc: "TLN_UpdateFrame".}
 proc openResourcePackImpl(filename, key: cstring): bool {.tln, importc: "TLN_OpenResourcePack".}
-proc getGlobalPaletteImpl(index: int32): Palette {.tln, importc: "TLN_SetGlobalPalette".}
+proc getGlobalPaletteImpl(index: int32): Palette {.tln, importc: "TLN_GetGlobalPalette".}
 
 proc init*(hres, vres, numLayers, numSprites, numAnimations: int): Engine {.inline.} = (result = initImpl(hres.int32, vres.int32, numLayers.int32, numSprites.int32, numAnimations.int32); if result == nil: raise e)
 proc deinit*() {.tln, importc: "TLN_Deinit".}
