@@ -580,6 +580,7 @@ proc delete*(list: ObjectList) {.inline.} = (if not deleteImpl(list): raise e)
 
 type Layer* = distinct int32
 
+proc setLayerImpl(layer: Layer, tileset: Tileset, tilemap: Tilemap): bool {.tln, importc: "TLN_SetLayer".}
 proc setTilemapImpl(layer: Layer; tilemap: Tilemap): bool {.tln, importc: "TLN_SetLayerTilemap".}
 proc setBitmapImpl(layer: Layer; bitmap: Bitmap): bool {.tln, importc: "TLN_SetLayerBitmap".}
 proc setPaletteImpl(layer: Layer; palette: Palette): bool {.tln, importc: "TLN_SetLayerPalette".}
@@ -610,6 +611,7 @@ proc getXImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerX".}
 proc getYImpl(layer: Layer): int32 {.tln, importc: "TLN_GetLayerY".}
 proc setParallaxFactorImpl(layer: Layer; x, y: float32): bool {.tln, importc: "TLN_SetLayerParallaxFactor".}
 
+proc setLayer*(layer: Layer, tileset: Tileset, tilemap: Tilemap) = (if not setLayerImpl(layer, tileset, tilemap): raise e)
 proc setTilemap*(layer: Layer; tilemap: Tilemap) {.inline.} = (if not setTilemapImpl(layer, tilemap): raise e)
 proc setBitmap*(layer: Layer; bitmap: Bitmap) {.inline.} = (if not setBitmapImpl(layer, bitmap): raise e)
 proc setPalette*(layer: Layer; palette: Palette) {.inline.} = (if not setPaletteImpl(layer, palette): raise e)
