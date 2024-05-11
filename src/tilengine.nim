@@ -48,7 +48,7 @@ type
 const
   BlendMix* = BlendMix50
 
-func tileFlags(flags: set[TileFlags]): uint16 =
+func tileFlags*(flags: set[TileFlags]): uint16 =
   (TileNone in flags).uint16 or
   (TileFlipX in flags).uint16 or
   (TileFlipY in flags).uint16 or
