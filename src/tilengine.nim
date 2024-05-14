@@ -117,7 +117,7 @@ type
     name*: array[32, char]      ## Sequence name
     numFrames*: int32           ## Number of frames
 
-  SpriteData* {.byref.} = object
+  SpriteData* {.bycopy.} = object
     ## Sprite creation info for `createSpriteset()`
     name*: array[64, char]      ## Entry name
     x*: int32                   ## Horizontal position
@@ -420,7 +420,7 @@ proc getWindowScaleFactor*(): int {.inline.} = getWindowScaleFactorImpl().int32
 # ---------
 # Spriteset resources management for sprites
 
-proc createSpritesetImpl(bitmap: Bitmap; data: SpriteData; numEntries: int32): Spriteset {.tln, importc: "TLN_CreateSpriteset".}
+proc createSpritesetImpl(bitmap: Bitmap; data: ptr UncheckedArray[SpriteData]; numEntries: int32): Spriteset {.tln, importc: "TLN_CreateSpriteset".}
 proc loadSpritesetImpl(name: cstring): Spriteset {.tln, importc: "TLN_LoadSpriteset".}
 proc cloneImpl(src: Spriteset): Spriteset {.tln, importc: "TLN_CloneSpriteset".}
 proc getSpriteInfoImpl(spriteset: Spriteset; entry: int32; info: var SpriteInfo): bool {.tln, importc: "TLN_GetSpriteInfo".}
@@ -428,7 +428,7 @@ proc findSpriteImpl(spriteset: Spriteset; name: cstring): int32 {.tln, importc: 
 proc setDataImpl(spriteset: Spriteset; entry: int32; data: SpriteData; pixels: pointer; pitch: int32): bool {.tln, importc: "TLN_SetSpritesetData".}
 proc deleteImpl(spriteset: Spriteset): bool {.tln, importc: "TLN_DeleteSpriteset".}
 
-proc createSpriteset*(bitmap: Bitmap; data: SpriteData; numEntries: int): Spriteset {.inline.} = (result = createSpritesetImpl(bitmap, data, cast[int32](numEntries)); if result == nil: raise e)
+proc createSpriteset*(bitmap: Bitmap; data: ptr UncheckedArray[SpriteData]; numEntries: int): Spriteset {.inline.} = (result = createSpritesetImpl(bitmap, data, cast[int32](numEntries)); if result == nil: raise e)
 proc loadSpriteset*(name: cstring): Spriteset {.inline.} = (result = loadSpritesetImpl(name); if result == nil: raise e)
 proc clone*(src: Spriteset): Spriteset {.inline.} = (result = cloneImpl(src); if result == nil: raise e)
 proc getSpriteInfo*(spriteset: Spriteset; entry: int): SpriteInfo {.inline.} = (if not getSpriteInfoImpl(spriteset, cast[int32](entry), result): raise e)
