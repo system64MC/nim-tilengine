@@ -513,7 +513,7 @@ proc subColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.t
 proc modColorImpl(palette: Palette; r, g, b: uint8; start, num: uint8): bool {.tln, importc: "TLN_ModPaletteColor".}
 proc getDataImpl(palette: Palette; index: int32): ptr UncheckedArray[uint8] {.tln, importc: "TLN_GetPaletteData".}
 proc deleteImpl(palette: Palette): bool {.tln, importc: "TLN_DeletePalette".}
-proc getNumColorsImpl(palette: Palette): int32 {.tln, importc: "TLN_TLN_GetPaletteNumColors".}
+proc getNumColorsImpl(palette: Palette): int32 {.tln, importc: "TLN_GetPaletteNumColors".}
 
 proc createPalette*(entries: int): Palette {.inline.} = (result = createPaletteImpl(cast[int32](entries)); if result == nil: raise e)
 proc loadPalette*(filename: cstring): Palette {.inline.} = (result = loadPaletteImpl(filename); if result == nil: raise e)
